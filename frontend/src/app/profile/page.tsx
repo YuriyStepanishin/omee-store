@@ -49,7 +49,7 @@ export default function Profile() {
       {user.role === 'ADMIN' && (
         <p>
           <Link className={css.link} href="/admin">
-            Керування магазином →
+            Сторінка адміністратора →
           </Link>
         </p>
       )}
