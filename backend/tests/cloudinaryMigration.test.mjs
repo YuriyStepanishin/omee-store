@@ -114,3 +114,36 @@ test('failed upload leaves original database URLs untouched; preview never uploa
     !p.calls.some(c => c.sql.startsWith('INSERT') || c.sql.startsWith('UPDATE'))
   );
 });
+function parallelFixture({ failAuth = false } = {}) {
+  let active = 0, peak = 0, uploads = 0;
+  const calls = [];
+  const client = {
+    async query(sql) {
+      calls.push(sql);
+      if (sql.includes('pg_try_advisory')) return { rows: [{ locked: true }] };
+      if (sql.startsWith('SELECT id,image_url')) return { rows: Array.from({ length: 5 }, (_, i) => ({ id: String(i), image_url: `https://cotril.it/${i}.png` })) };
+      return { rows: [], rowCount: 1 };
+    }, release() { calls.push('RELEASE'); },
+  };
+  return { calls, pool: { connect: async () => client }, uploads: () => uploads, peak: () => peak,
+    cloudinary: { uploader: { async upload() {
+      const index = ++uploads; active++; peak = Math.max(peak, active);
+      await new Promise(resolve => setTimeout(resolve, 5)); active--;
+      if (failAuth) throw Object.assign(Error('Unauthorized'), { http_code: 401 });
+      return { secure_url: `https://res.cloudinary.com/store/${index}.png`, public_id: String(index) };
+    } } },
+  };
+}
+test('parallel migration bounds uploads, reports remaining work and saves each receipt', async () => {
+  const f = parallelFixture();
+  const result = await transferProductImages(f.pool, f.cloudinary, { concurrency: 2, limit: 3, log: () => {} });
+  assert.equal(f.uploads(), 3); assert.equal(f.peak(), 2); assert.equal(result.pending, 2);
+  assert.equal(f.calls.filter(sql => sql.startsWith('INSERT INTO cloudinary_imports')).length, 3);
+  assert.equal(f.calls.at(-1), 'RELEASE');
+});
+test('authentication failure stops parallel workers before scheduling more images', async () => {
+  const f = parallelFixture({ failAuth: true });
+  await assert.rejects(transferProductImages(f.pool, f.cloudinary, { concurrency: 2, log: () => {} }));
+  assert.ok(f.uploads() <= 2); assert.equal(f.calls.at(-1), 'RELEASE');
+  assert.ok(!f.calls.some(sql => sql.startsWith('UPDATE product_images')));
+});

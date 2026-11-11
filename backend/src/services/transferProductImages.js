@@ -42,8 +42,12 @@ export function externalImage(url) {
 export async function transferProductImages(
   pool,
   cloudinary,
-  { preview = false, log = console.log } = {}
+  { preview = false, log = console.log, concurrency = 1, limit = Infinity } = {}
 ) {
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 6)
+    throw Error('Invalid image upload concurrency');
+  if (!(limit === Infinity || (Number.isInteger(limit) && limit > 0)))
+    throw Error('Invalid image upload limit');
   const client = await pool.connect();
   const summary = {
     uploaded: 0,
@@ -85,9 +89,12 @@ export async function transferProductImages(
     if (preview) return { ...summary, pending: groups.size };
     // Require the receipt table before performing any uploads.
     await client.query('SELECT source_url FROM cloudinary_imports LIMIT 0');
-    let index = 0;
-    for (const [source, ids] of groups) {
-      index++;
+    const jobs = [...groups].slice(0, limit);
+    let next = 0, stopped;
+    async function worker() {
+     while (!stopped && next < jobs.length) {
+      const index = ++next;
+      const [source, ids] = jobs[index - 1];
       try {
         const receipt = await client.query(
           'SELECT image_url,public_id FROM cloudinary_imports WHERE source_url=$1',
@@ -154,12 +161,18 @@ export async function transferProductImages(
             '28P01',
             '42P01',
             401,
+            402,
             403,
+            429,
           ].includes(error.error?.code || error.code || error.http_code)
         )
-          throw error;
+          stopped = error;
       }
+     }
     }
+    await Promise.all(Array.from({ length: concurrency }, worker));
+    if (stopped) throw stopped;
+    summary.pending = Math.max(0, groups.size - jobs.length);
     return summary;
   } finally {
     try {

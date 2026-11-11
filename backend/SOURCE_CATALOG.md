@@ -15,6 +15,12 @@ npm run cloudinary:migrate
 npm run cloudinary:migrate -- --apply
 ```
 
+For an explicitly started, bounded photo batch, use `npm run cloudinary:migrate -- --apply --concurrency=4 --limit=1500`.
+The command supports up to six parallel uploads, reports remaining external image sources, and stops scheduling new uploads on authentication or quota errors.
+It is not attached to installation, deployment, or startup; run each batch explicitly.
+
+Cotril Italian and English locale URLs with the same full product slug match the same existing card. Other product slugs and package URLs stay separate. A generic Cotril page title is replaced by its published structured product name when available; the original card is retained unchanged in source data.
+
 The first import command executes the complete import in a transaction and rolls it back for validation. The apply command commits it atomically.
 Existing products are matched by imported SKU or exact source URL. Their price, stock, name, category, description and publication status stay unchanged. Collected attributes and the full original card are saved in `characteristics.sourceData`.
 New cards are unpublished with zero stock. Only explicit UAH prices become shop prices; absent or foreign prices use zero while preserving the original price and currency in source attributes. Review prices and stock before publishing.
