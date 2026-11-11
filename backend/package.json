@@ -16,6 +16,7 @@
     "cloudinary:quality": "node --env-file-if-exists=.env src/utils/improveImageQuality.js",
     "catalog:categories": "node --env-file-if-exists=.env src/utils/createCatalogCategories.js",
     "catalog:prepare": "node --env-file-if-exists=.env src/utils/prepareCatalog.js",
+    "catalog:import-sources": "node --env-file-if-exists=.env src/utils/importSourceCatalog.js",
     "blog:publish": "node --env-file-if-exists=.env src/utils/publishHairArticles.js",
     "media:import": "node --env-file-if-exists=.env src/utils/importHairMedia.js"
   },
