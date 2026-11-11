@@ -59,6 +59,12 @@ test('source validation skips migrated assets and rejects unsupported schemes an
   ])
     assert.throws(() => externalImage(value));
 });
+test('all collected brand image hosts are supported without allowing lookalike hosts', () => {
+  for (const host of ['image.lullaby.ua', 'cdn.shopify.com', 'www.redken.com', 'raywell.shop', 'e-c.storage.googleapis.com']) {
+    assert.equal(externalImage(`https://${host}/photo.jpg`), true);
+    assert.throws(() => externalImage(`https://${host}.evil.example/photo.jpg`));
+  }
+});
 test('duplicate source is uploaded once; receipt precedes guarded replacement', async () => {
   const f = fixture();
   const result = await transferProductImages(f.pool, f.cloudinary, {
