@@ -27,6 +27,7 @@ export function externalImage(url) {
       'organethic.com.ua',
       'lipss.care',
       'emmebi.com.ua',
+      'elfori.com',
       'hadat.com',
       'www.glynt.com',
       'yprjqvdneogmkieasyvo.supabase.co',
