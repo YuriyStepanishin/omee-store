@@ -11,6 +11,12 @@ test('imports cards with missing and foreign prices as unpublished-ready zero va
 test('accepts explicit UAH currency and decimal commas', () => {
   assert.equal(normalizeSource({ ...card, price: '1 234,50', priceCurrency: 'UAH' }, 'a.json').price, 1234.5);
 });
+test('Cotril locale aliases share a product slug and recover the published source name', () => {
+  const row = normalizeSource({ ...card, title: 'Cotril', brand: 'Cotril', url: 'https://cotril.it/prodotto/mud/', sourceData: { name: 'Mud' } }, 'cotril.json');
+  assert.equal(row.name, 'Mud');
+  assert.deepEqual(row.sourceUrls, ['https://cotril.it/prodotto/mud/', 'https://cotril.it/en/prodotto/mud/']);
+  assert.equal(row.characteristics.sourceData.title, 'Cotril');
+});
 test('separates pack URLs even with matching manufacturer SKU', () => {
   const a = normalizeSource({ ...card, sku: 'same' }, 'a.json');
   const b = normalizeSource({ ...card, sku: 'same', url: card.url + '-box' }, 'a.json');

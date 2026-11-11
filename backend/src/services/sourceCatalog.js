@@ -5,6 +5,16 @@ export function normalizeSource(row, file) {
   const url = new URL(row.url);
   if (url.protocol !== 'https:' || url.username || url.password) throw Error('Invalid source URL');
   const key = createHash('sha256').update(row.url).digest('hex').slice(0, 24);
+  const sourceUrls = [row.url];
+  // Cotril exposes the same product permalink in Italian and English.
+  // Match only this known locale prefix, retaining the complete product slug.
+  if (url.hostname === 'cotril.it' && /^\/(en\/)?prodotto\//.test(url.pathname)) {
+    const alternate = new URL(url);
+    alternate.pathname = url.pathname.startsWith('/en/') ? url.pathname.slice(3) : '/en' + url.pathname;
+    sourceUrls.push(alternate.href);
+  }
+  const title = row.title.trim() === row.brand && typeof row.sourceData?.name === 'string'
+    ? row.sourceData.name.trim() : row.title.trim();
   const currency = row.priceCurrency || (/грн|UAH|₴/i.test(String(row.price)) ? 'UAH' : 'UNKNOWN');
   const raw = String(row.price ?? '').trim();
   const numeric = raw ? Number(raw.replace(/\s/g, '').replace(',', '.').replace(/грн\.?|UAH|₴/gi, '')) : null;
@@ -15,10 +25,10 @@ export function normalizeSource(row, file) {
     catch { return false; }
   }))];
   return {
-    key, sku: 'IMPORT-' + key, name: Array.from(row.title.trim()).slice(0, 240).join(''),
+    key, sku: 'IMPORT-' + key, name: Array.from(title).slice(0, 240).join(''), sourceUrls,
     brand: row.brand || 'Import', description: row.productDescription || row.description || '', price, images,
     characteristics: { ...row.characteristics, brand: row.brand || 'Import', sourceUrl: row.url,
-      sourcePrice: row.sourcePrice ?? row.price, sourceCurrency: currency, sourceFile: file, sourceData: row },
+      sourcePrice: row.sourcePrice ?? row.price, sourceCurrency: currency, sourceFile: file, sourceUrls, sourceData: row },
   };
 }
 
@@ -31,8 +41,8 @@ export async function importSourceCatalog(client, records, { apply = false } = {
     await client.query("SELECT pg_advisory_xact_lock(hashtext('catalog-source-import'))");
     for (const row of records) {
       const found = await client.query(
-        "SELECT id FROM products WHERE sku=$1 OR characteristics->>'sourceUrl'=$2 OR characteristics->'sourceData'->>'url'=$2",
-        [row.sku, row.characteristics.sourceUrl]);
+        "SELECT id FROM products WHERE sku=$1 OR characteristics->>'sourceUrl'=ANY($2::text[]) OR characteristics->'sourceData'->>'url'=ANY($2::text[]) OR characteristics->'sourceUrls' ?| $2::text[]",
+        [row.sku, row.sourceUrls]);
       if (found.rowCount > 1) throw Error('Ambiguous existing source URL');
       let id = found.rows[0]?.id;
       if (id) {
