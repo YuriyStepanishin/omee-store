@@ -49,6 +49,10 @@ export async function transferProductImages(
   if (!(limit === Infinity || (Number.isInteger(limit) && limit > 0)))
     throw Error('Invalid image upload limit');
   const client = await pool.connect();
+  // The dedicated client holds the advisory lock. Upload workers use the pool
+  // so network uploads do not queue concurrent queries on that lock connection.
+  const workerQuery = typeof pool.query === 'function'
+    ? pool.query.bind(pool) : client.query.bind(client);
   const summary = {
     uploaded: 0,
     reused: 0,
@@ -96,7 +100,7 @@ export async function transferProductImages(
       const index = ++next;
       const [source, ids] = jobs[index - 1];
       try {
-        const receipt = await client.query(
+        const receipt = await workerQuery(
           'SELECT image_url,public_id FROM cloudinary_imports WHERE source_url=$1',
           [source]
         );
@@ -125,7 +129,7 @@ export async function transferProductImages(
             image_url: result.secure_url,
             public_id: result.public_id,
           };
-          await client.query(
+          await workerQuery(
             'INSERT INTO cloudinary_imports(source_url,image_url,public_id,asset_folder) VALUES($1,$2,$3,$4) ON CONFLICT(source_url) DO NOTHING',
             [
               source,
@@ -137,7 +141,7 @@ export async function transferProductImages(
           summary.uploaded++;
         }
         // Compare old URL to avoid replacing a photo edited while this job was running.
-        const updated = await client.query(
+        const updated = await workerQuery(
           'UPDATE product_images SET image_url=$1 WHERE id=ANY($2::uuid[]) AND image_url=$3',
           [target.image_url, ids, source]
         );

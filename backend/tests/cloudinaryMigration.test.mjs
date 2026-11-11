@@ -41,6 +41,7 @@ function fixture({ receipt, fail = false } = {}) {
   };
   return {
     pool: { connect: async () => client },
+    client,
     cloudinary,
     calls,
     uploads: () => uploads,
@@ -96,6 +97,15 @@ test('saved receipt avoids uploading again after interruption', async () => {
   assert.equal(f.uploads(), 0);
   assert.equal(r.reused, 1);
   assert.equal(r.updated, 2);
+});
+test('upload workers use pool queries while the dedicated client keeps its lock', async () => {
+  const f = fixture();
+  let workerQueries = 0;
+  f.pool.query = async (...args) => { workerQueries++; return f.client.query(...args); };
+  await transferProductImages(f.pool, f.cloudinary, { log: () => {} });
+  assert.equal(workerQueries, 3);
+  assert.ok(f.calls.some(c => c.sql.includes('pg_advisory_unlock')));
+  assert.equal(f.calls.at(-1).sql, 'RELEASE');
 });
 test('failed upload leaves original database URLs untouched; preview never uploads', async () => {
   const f = fixture({ fail: true });
