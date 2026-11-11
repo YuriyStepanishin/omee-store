@@ -41,6 +41,7 @@ function fixture({ receipt, fail = false } = {}) {
   };
   return {
     pool: { connect: async () => client },
+    client,
     cloudinary,
     calls,
     uploads: () => uploads,
@@ -60,7 +61,7 @@ test('source validation skips migrated assets and rejects unsupported schemes an
     assert.throws(() => externalImage(value));
 });
 test('all collected brand image hosts are supported without allowing lookalike hosts', () => {
-  for (const host of ['image.lullaby.ua', 'cdn.shopify.com', 'www.redken.com', 'raywell.shop', 'e-c.storage.googleapis.com']) {
+  for (const host of ['elfori.com', 'image.lullaby.ua', 'cdn.shopify.com', 'www.redken.com', 'raywell.shop', 'e-c.storage.googleapis.com']) {
     assert.equal(externalImage(`https://${host}/photo.jpg`), true);
     assert.throws(() => externalImage(`https://${host}.evil.example/photo.jpg`));
   }
@@ -96,6 +97,15 @@ test('saved receipt avoids uploading again after interruption', async () => {
   assert.equal(f.uploads(), 0);
   assert.equal(r.reused, 1);
   assert.equal(r.updated, 2);
+});
+test('upload workers use pool queries while the dedicated client keeps its lock', async () => {
+  const f = fixture();
+  let workerQueries = 0;
+  f.pool.query = async (...args) => { workerQueries++; return f.client.query(...args); };
+  await transferProductImages(f.pool, f.cloudinary, { log: () => {} });
+  assert.equal(workerQueries, 3);
+  assert.ok(f.calls.some(c => c.sql === 'ROLLBACK'));
+  assert.equal(f.calls.at(-1).sql, 'RELEASE');
 });
 test('failed upload leaves original database URLs untouched; preview never uploads', async () => {
   const f = fixture({ fail: true });
@@ -146,4 +156,13 @@ test('authentication failure stops parallel workers before scheduling more image
   await assert.rejects(transferProductImages(f.pool, f.cloudinary, { concurrency: 2, log: () => {} }));
   assert.ok(f.uploads() <= 2); assert.equal(f.calls.at(-1), 'RELEASE');
   assert.ok(!f.calls.some(sql => sql.startsWith('UPDATE product_images')));
+});
+
+test('migration uses a transaction-scoped lock and releases it after preview', async () => {
+ const f = fixture();
+ await transferProductImages(f.pool, null, { preview: true, log: () => {} });
+ assert.equal(f.calls[0].sql, 'BEGIN');
+ assert.ok(f.calls.some(c => c.sql.includes('pg_try_advisory_xact_lock')));
+ assert.equal(f.calls.at(-2).sql, 'ROLLBACK');
+ assert.equal(f.calls.at(-1).sql, 'RELEASE');
 });
