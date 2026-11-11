@@ -49,7 +49,8 @@ export async function transferProductImages(
   if (!(limit === Infinity || (Number.isInteger(limit) && limit > 0)))
     throw Error('Invalid image upload limit');
   const client = await pool.connect();
-  // The dedicated client holds the advisory lock. Upload workers use the pool
+  // A transaction pins the advisory lock through Neon's transaction pooler.
+  // Upload workers use the pool
   // so network uploads do not queue concurrent queries on that lock connection.
   const workerQuery = typeof pool.query === 'function'
     ? pool.query.bind(pool) : client.query.bind(client);
@@ -61,14 +62,16 @@ export async function transferProductImages(
     skipped: 0,
     failedSources: [],
   };
-  let locked = false;
+  let transactionStarted = false;
   try {
+    await client.query('BEGIN');
+    transactionStarted = true;
+    await client.query("SET LOCAL idle_in_transaction_session_timeout = '15min'");
     const lock = await client.query(
-      'SELECT pg_try_advisory_lock(72619202) AS locked'
+      'SELECT pg_try_advisory_xact_lock(72619203) AS locked'
     );
     if (!lock.rows[0].locked)
       throw Error('Перенесення фото вже запущено в іншому терміналі.');
-    locked = true;
     const { rows } = await client.query(
       'SELECT id,image_url FROM product_images ORDER BY product_id,sort_order,id'
     );
@@ -180,7 +183,7 @@ export async function transferProductImages(
     return summary;
   } finally {
     try {
-      if (locked) await client.query('SELECT pg_advisory_unlock(72619202)');
+      if (transactionStarted) await client.query('ROLLBACK');
     } finally {
       client.release();
     }

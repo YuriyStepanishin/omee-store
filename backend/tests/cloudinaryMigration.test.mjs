@@ -104,7 +104,7 @@ test('upload workers use pool queries while the dedicated client keeps its lock'
   f.pool.query = async (...args) => { workerQueries++; return f.client.query(...args); };
   await transferProductImages(f.pool, f.cloudinary, { log: () => {} });
   assert.equal(workerQueries, 3);
-  assert.ok(f.calls.some(c => c.sql.includes('pg_advisory_unlock')));
+  assert.ok(f.calls.some(c => c.sql === 'ROLLBACK'));
   assert.equal(f.calls.at(-1).sql, 'RELEASE');
 });
 test('failed upload leaves original database URLs untouched; preview never uploads', async () => {
@@ -156,4 +156,13 @@ test('authentication failure stops parallel workers before scheduling more image
   await assert.rejects(transferProductImages(f.pool, f.cloudinary, { concurrency: 2, log: () => {} }));
   assert.ok(f.uploads() <= 2); assert.equal(f.calls.at(-1), 'RELEASE');
   assert.ok(!f.calls.some(sql => sql.startsWith('UPDATE product_images')));
+});
+
+test('migration uses a transaction-scoped lock and releases it after preview', async () => {
+ const f = fixture();
+ await transferProductImages(f.pool, null, { preview: true, log: () => {} });
+ assert.equal(f.calls[0].sql, 'BEGIN');
+ assert.ok(f.calls.some(c => c.sql.includes('pg_try_advisory_xact_lock')));
+ assert.equal(f.calls.at(-2).sql, 'ROLLBACK');
+ assert.equal(f.calls.at(-1).sql, 'RELEASE');
 });
