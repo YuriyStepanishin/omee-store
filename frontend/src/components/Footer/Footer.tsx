@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCatalog } from '@/services/storeApi';
+import { fetchStoreInfo } from '@/services/storeApi';
 import { BRAND } from '@/constants/brand';
 import { STORE_SOCIALS } from '@/constants/socials';
 import Container from '../Container/Container';
@@ -76,8 +76,8 @@ function FooterLinks({
 
 export default function Footer() {
   const { data } = useQuery({
-    queryKey: ['catalog', 'public'],
-    queryFn: fetchCatalog,
+    queryKey: ['catalog', 'info'],
+    queryFn: fetchStoreInfo,
   });
   const info = data?.info;
   const phone = `Телефон: ${info?.phone?.trim() || '096 758 02 06'}`;
@@ -96,7 +96,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className={css.consult}
           >
-            Запитати майстра <span aria-hidden="true">↗</span>
+            Запитати майстра
           </a>
         </div>
 
@@ -172,20 +172,28 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Написати в Telegram <span aria-hidden="true">↗</span>
+                Написати в Telegram
               </a>
               {info?.email && <a href={'mailto:' + info.email}>{info.email}</a>}
             </address>
-            <div className={css.mapBanner}>
-              <iframe
-                className={css.mapFrame}
-                title="Розташування KATYA MUSIYCHUK STUDIO на Google Maps"
-                src="https://maps.google.com/maps?q=KATYA%20MUSIYCHUK%20STUDIO%4049.435079%2C26.9881472&z=15&output=embed"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
           </section>
+          <aside className={css.mapBanner} aria-label="Ми на Google Maps">
+            <iframe
+              className={css.mapFrame}
+              title="Розташування KATYA MUSIYCHUK STUDIO на Google Maps"
+              src="https://maps.google.com/maps?q=KATYA%20MUSIYCHUK%20STUDIO%4049.435079%2C26.9881472&z=15&output=embed"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            <a
+              className={css.mapLink}
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Maps
+            </a>
+          </aside>
         </div>
 
         <div className={css.bottom}>

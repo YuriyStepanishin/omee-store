@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const storage=new Map();
+globalThis.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)};
+const {useCartStore}=await import('../src/store/cart.ts');
+test('account cart never leaks into the next account or persisted guest storage',()=>{
+  useCartStore.setState({ownerId:null,items:[],guestItems:[]});
+  useCartStore.getState().addToCart('guest-product');
+  useCartStore.getState().prepareOwner('account-a');
+  assert.deepEqual(useCartStore.getState().items,[]);
+  assert.deepEqual(useCartStore.getState().guestItems,[{productId:'guest-product',qty:1}]);
+  useCartStore.getState().loadAccount('account-a',[{productId:'private-a',qty:2}]);
+  const persisted=JSON.parse(storage.get('kss_cart_v2'));
+  assert.deepEqual(persisted.state.items,[]);
+  useCartStore.getState().prepareOwner(null);
+  assert.deepEqual(useCartStore.getState().items,[]);
+  useCartStore.getState().prepareOwner('account-b');
+  useCartStore.getState().loadAccount('account-a',[{productId:'late-response-a',qty:1}]);
+  assert.deepEqual(useCartStore.getState().items,[]);
+  assert.equal(useCartStore.getState().ownerId,'account-b');
+});

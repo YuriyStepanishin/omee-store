@@ -6,7 +6,7 @@
 @media(min-width:768px) and (max-width:1199px){.page{margin-block:40px 56px;}}
 @media(max-width:767px){.page{width:calc(100% - 32px);margin-block:32px 48px;}}
 .carriers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:28px 0;}
-.carrier{padding:20px;border:1px solid var(--color-border);border-radius:16px;background:var(--color-surface);}
+.carrier{padding:20px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-soft);}
 .carrier h2{font-size:18px;margin:14px 0 12px;}
 .carrier p{font-size:13px;line-height:1.7;margin-bottom:12px;}
 .carrierBadge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:44px;padding:0 10px;border-radius:10px;background:#df352b;color:#fff;font-weight:700;}

@@ -12,13 +12,16 @@ import {storeRoutes} from './routes/store.js';
 import {deliveryRoutes} from './routes/delivery.js';
 import {adminRoutes} from './routes/admin.js';
 import {articleRoutes} from './routes/articles.js';
+import {accountRoutes} from './routes/account.js';
 import {errorHandler,notFound} from './middleware/errors.js';
 export function createApp(config=readEnv()) {
  const app=express();app.disable('x-powered-by');app.use(helmet());
+ app.set('trust proxy', 1);
  app.use(cors({origin(origin,callback){callback(null,!origin||config.origins.includes(origin));},credentials:true}));
  app.use(express.json({limit:'128kb'}));
  app.get('/api/health',async(req,res)=>{if(config.mode==='postgres'){try{await getPool(config.databaseUrl).query('SELECT 1');}catch{return res.status(503).json({status:'unavailable',database:'unavailable'});}}res.json({status:'ok',mode:config.mode});});
  app.use('/api/auth',authRoutes(config));
+ app.use('/api/account',accountRoutes(config));
  app.use('/api',adminRoutes(config));
  app.use('/api',catalogRoutes(config));
  app.use('/api',contentRoutes(config));

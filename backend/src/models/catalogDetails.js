@@ -4,11 +4,11 @@ const first=(...values)=>values.map(text).find(Boolean)||'';
 export function catalogDetails(row){
  const raw=row.characteristics&&typeof row.characteristics==='object'?row.characteristics:{};
  const source=raw.sourceData&&typeof raw.sourceData==='object'?raw.sourceData:{};
- const brand=first(raw.brand,raw['Бренд'],raw['Brand'],source.brand);
+ const brand=first(row.brandName,raw.brand,raw['Бренд'],raw['Brand'],source.brand);
  const group=first(raw.group,raw['Група'],raw['Група товарів'],raw.sourceCategory,source.category,source.group);
  const category=group||((row.category||'').toLowerCase()!==brand.toLowerCase()?row.category:'');
  const groups=[...new Set([category,...(Array.isArray(raw.groups)?raw.groups:[]),...(Array.isArray(raw.sourceGroups)?raw.sourceGroups:[])].map(text).filter(Boolean))];
- const reserved=new Set(['groups','brand','Brand','group','subcategory','sourceData','formulaFeatures','usage','recommendation','activeIngredients','inciIngredients']);
+ const reserved=new Set(['groups','brandId','brand','Brand','group','subcategory','sourceData','formulaFeatures','usage','recommendation','activeIngredients','inciIngredients']);
  const characteristics={};
  for(const [key,value] of Object.entries({...source.characteristics,...raw})){
   if(reserved.has(key)||key.startsWith('source'))continue;

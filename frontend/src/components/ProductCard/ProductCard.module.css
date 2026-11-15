@@ -1,17 +1,25 @@
-.card{min-width:0;padding:10px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);cursor:pointer;overflow-wrap:anywhere;transition:box-shadow var(--transition);}
-.card:hover{box-shadow:var(--shadow-soft);}
+.card{position:relative;min-width:0;padding:10px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--color-border);border-radius:20px;background:var(--color-surface);cursor:pointer;overflow-wrap:anywhere;transition:transform 220ms ease,box-shadow 220ms ease,border-color 220ms ease;}
+.card:focus-within{z-index:2;border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary),var(--shadow-soft);}
+@media(hover:hover) and (pointer:fine){.card:hover{z-index:2;transform:translateY(-4px) scale(1.025);border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary),0 16px 32px rgb(0 0 0 / 20%);}}
+@media(prefers-reduced-motion:reduce){.card{transition:none;}.card:hover{transform:none;}}
+.meta{display:flex;gap:8px;align-items:center;justify-content:space-between;}
+.meta .brand{min-width:0;}
+.favoriteControl{position:relative;flex-shrink:0;}
+.favorite{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid var(--color-border);border-radius:50%;background:var(--color-surface);color:var(--color-primary);font-size:25px;}
+.favorite[aria-pressed='true']{background:var(--color-primary-soft);border-color:var(--color-primary);}
+.favoriteError{position:absolute;right:0;top:100%;z-index:2;width:180px;padding:8px;background:var(--color-surface);color:var(--color-error);border:1px solid var(--color-border);font-size:12px;}
 .photoButton{position:relative;padding:0;border:0;border-radius:12px;background:#fff;overflow:hidden;}
 .photo{width:100%;aspect-ratio:1/1;object-fit:contain;padding:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#70665e;}
-.openHint{position:absolute;bottom:10px;right:10px;padding:5px 10px;border:1px solid #dedecd;border-radius:999px;background:#faf9f3;color:#4c352e;font-size:11px;}
+.openHint{position:absolute;bottom:10px;right:10px;padding:5px 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text);font-size:11px;}
 .brand{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--color-muted);}
 .title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:41px;padding:0;text-align:left;font-size:14px;line-height:1.45;font-weight:600;color:var(--color-text);background:none;border:0;}
 .title:hover{color:var(--color-primary);}
 .description{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.6;color:var(--color-muted);}
-.badge{align-self:start;border-radius:999px;padding:3px 10px;background:var(--color-primary-soft);font-size:11px;}
+.badge{align-self:start;border-radius:999px;padding:3px 10px;background:var(--color-primary-soft);color:var(--color-primary);font-size:11px;}
 .bottom{margin-top:auto;display:grid;gap:8px;padding-top:6px;}
-.price{font-size:18px;font-weight:600;line-height:1.4;}
+.price{font-size:18px;font-weight:600;line-height:1.4;font-variant-numeric:tabular-nums;letter-spacing:-.025em;}
 .price del{display:block;font-size:13px;font-weight:400;color:var(--color-muted);}
-.cart{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:11px 16px;border:0;border-radius:10px;background:var(--color-primary);color:var(--color-on-primary);font-weight:600;font-size:13px;}
+.cart{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:11px 16px;border:0;border-radius:999px;background:var(--color-primary);color:var(--color-on-primary);font-weight:600;font-size:13px;transition:background var(--transition);}
 .cart:hover:not(:disabled){background:var(--color-primary-hover);}
 .cart svg{flex-shrink:0;}
 @media(min-width:768px) and (max-width:1199px){.card{padding:12px;}}

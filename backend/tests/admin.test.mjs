@@ -188,6 +188,9 @@ test('every new admin operation rejects guests and customers; ADMIN reads DB and
     const app = createApp(config);
     const cookie = 'kss_access=' + signSession({ id }, config).access;
     const operations = [
+      ['/admin/overview', 'GET'],
+      ['/admin/customers', 'GET'],
+      ['/admin/settings', 'GET'],
       ['/admin/orders', 'GET'],
       ['/admin/orders/' + id, 'GET'],
       ['/admin/orders/' + id, 'PUT'],
@@ -207,6 +210,9 @@ test('every new admin operation rejects guests and customers; ADMIN reads DB and
         (await request(app, '/api' + path, cookie, method)).status,
         403
       );
+      role = 'MANAGER';
+      assert.equal((await request(app, '/api' + path, cookie, method)).status, 403);
+      role = 'CUSTOMER';
     }
     role = 'ADMIN';
     const orders = await request(app, '/api/admin/orders', cookie);

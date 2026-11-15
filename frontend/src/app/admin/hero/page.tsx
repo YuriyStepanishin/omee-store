@@ -169,15 +169,20 @@ export default function HeroAdmin() {
                 />
               </label>
               <label>
-                Завантажити зображення
+                Завантажити банер · 1942 × 809 px
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  aria-describedby="hero-upload-hint"
                   onChange={e => {
                     void upload(e.target.files?.[0]);
                     e.target.value = '';
                   }}
                 />
+                <span id="hero-upload-hint" className={css.muted}>
+                  Рекомендовано 1942 × 809 px. JPEG, PNG або WebP, до 5 МБ.
+                  Важливий текст і зображення розміщуйте з відступом від країв.
+                </span>
               </label>
               <label>
                 HTTPS-посилання на фото

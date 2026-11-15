@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import bcrypt from 'bcrypt';
 import { authService } from '../src/services/auth.js';
 import { signSession, verifyToken, hashToken } from '../src/services/tokens.js';
-import { parseAuth, registerSchema } from '../src/validators/auth.js';
+import { parseAuth, registerSchema, changePasswordSchema } from '../src/validators/auth.js';
+import { changePassword } from '../src/services/changePassword.js';
 const config = { accessSecret: 'a'.repeat(48), refreshSecret: 'b'.repeat(48) };
 const user = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -12,12 +13,38 @@ const user = {
   phone: null,
   role: 'CUSTOMER',
 };
+test('password confirmation and minimum length are enforced by the server', () => {
+  const data = {name:'Юра',email:user.email,password:'Password123',confirmPassword:'Password123'};
+  assert.throws(()=>parseAuth(registerSchema,{...data,confirmPassword:'different'}),{status:400});
+  assert.throws(()=>parseAuth(registerSchema,{...data,password:'short',confirmPassword:'short'}),{status:400});
+  assert.throws(()=>parseAuth(changePasswordSchema,{currentPassword:'old',password:'Password123',confirmPassword:'different'}),{status:400});
+});
+
+test('changing a password verifies the old password and revokes sessions transactionally',async()=>{
+  const stored = await bcrypt.hash('OldPassword123',4);
+  const calls=[];
+  let released=0;
+  const client={query:async(sql,args)=>{calls.push({sql,args});return {rows:sql.startsWith('SELECT')?[{password:stored}]:[]};},release(){released++;}};
+  const pool={connect:async()=>client};
+  await assert.rejects(()=>changePassword(pool,user.id,{currentPassword:'wrong',password:'NewPassword123'}),{status:400});
+  assert.equal(calls.at(-1).sql,'ROLLBACK');
+  assert.equal(calls.filter(call=>call.sql.startsWith('UPDATE')).length,0);
+  await changePassword(pool,user.id,{currentPassword:'OldPassword123',password:'NewPassword123'});
+  const update=calls.find(call=>call.sql.startsWith('UPDATE users'));
+  assert.ok(await bcrypt.compare('NewPassword123',update.args[0]));
+  assert.equal(update.args[1],user.id);
+  assert.ok(calls.some(call=>call.sql.startsWith('UPDATE refresh_tokens')));
+  assert.ok(calls.some(call=>call.sql.startsWith('UPDATE password_reset_tokens')));
+  assert.equal(calls.at(-1).sql,'COMMIT');
+  assert.equal(released,2);
+});
 test('registration validates input and rejects role injection', () => {
   assert.equal(
     parseAuth(registerSchema, {
       name: 'Юра',
       email: ' TEST@example.com ',
       password: 'Password123',
+      confirmPassword: 'Password123',
     }).email,
     'test@example.com'
   );

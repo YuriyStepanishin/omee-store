@@ -14,12 +14,23 @@
 .close svg {width:22px;height:22px;display:block;}
 
 .passwordField {display:grid;gap:7px;}
-.passwordControl {display:flex;align-items:stretch;border:1px solid var(--color-border);border-radius:10px;}
-.passwordControl input {flex:1;width:0;border:0;}
-.form .passwordToggle {flex-shrink:0;border:0;border-left:1px solid var(--color-border);border-radius:0 9px 9px 0;padding:0 12px;background:var(--color-primary-soft);color:var(--color-primary);font-size:14px;min-height:44px;}
-.form .passwordToggle:hover {background:var(--color-primary-soft);}
+.passwordControl {display:flex;align-items:stretch;border:1px solid var(--color-border);border-radius:10px;overflow:hidden;background:var(--color-surface);}
+.passwordControl input {flex:1;width:0;border:0;border-radius:0;}
+.passwordControl:focus-within {border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-primary-soft);}
+.passwordControl input:focus-visible {outline:none;box-shadow:none;}
+.form .passwordToggle {display:flex;align-items:center;justify-content:center;flex:0 0 104px;border:0;border-left:1px solid var(--color-border);border-radius:0;padding:0 14px;background:var(--color-primary-soft);color:var(--color-primary);font-size:14px;min-height:48px;cursor:pointer;}
+.form .passwordToggle:hover:not(:disabled) {background:var(--color-primary);color:var(--color-on-primary);}
+.form .passwordToggle:focus-visible {outline-offset:-4px;}
 .page{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:36px;box-shadow:var(--shadow-soft);}
 .page h1{font-family:var(--font-display);font-weight:400;line-height:1.2;}
+.brand{text-align:center;font-size:32px;font-weight:700;margin-bottom:12px;}
+.page:has(.brand) h1{text-align:center;padding-right:0;font-size:28px;margin-bottom:10px;}
+.subtitle{text-align:center;color:var(--color-muted);margin-bottom:24px;}
+.forgot{justify-self:end;color:var(--color-muted);font-size:14px;}
+.page:has(.brand) .form input{border-radius:999px;}
+.page:has(.brand) .passwordControl{border-radius:999px;overflow:hidden;}
+.page:has(.brand) .passwordControl input{border-radius:0;}
+.page:has(.brand) .form button:not(.passwordToggle){border-radius:999px;}
 .form label{font-size:14px;}
 .form button{border-radius:8px;min-height:48px;color:var(--color-on-primary);font-weight:600;}
 .form input{min-height:48px;background:var(--color-surface);}

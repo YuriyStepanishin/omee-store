@@ -3,6 +3,12 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { CartItem } from '@/types/store';
 interface CartState {
+    ownerId: string | null;
+    guestItems: CartItem[];
+    syncing: boolean;
+    syncError: string;
+    prepareOwner: (ownerId: string | null) => void;
+    loadAccount: (ownerId: string, items: CartItem[]) => void;
     items: CartItem[];
     isOpen: boolean;
     openCart: () => void;
@@ -14,6 +20,12 @@ interface CartState {
 }
 const safeQty = (qty: number) => Number.isFinite(qty) ? Math.min(99, Math.max(1, Math.floor(qty))) : 1;
 export const useCartStore = create<CartState>()(persist((set) => ({
+    ownerId:null,
+    guestItems:[],
+    syncing:false,
+    syncError:'',
+    prepareOwner:(ownerId)=>set(state=>state.ownerId===ownerId?state:{ownerId,guestItems:state.ownerId===null?state.items:state.guestItems,items:ownerId?[]:state.guestItems,syncing:Boolean(ownerId),syncError:'',isOpen:false}),
+    loadAccount:(ownerId,items)=>set(state=>state.ownerId===ownerId?{items,guestItems:[],syncing:false,syncError:''}:state),
     items: [],
     isOpen: false,
     openCart: () => set({ isOpen: true }),
@@ -22,7 +34,7 @@ export const useCartStore = create<CartState>()(persist((set) => ({
     removeFromCart: (id) => set(state => ({ items: state.items.filter(i => i.productId !== id) })),
     changeQty: (id, qty) => set(state => ({ items: state.items.map(i => i.productId === id ? { ...i, qty: safeQty(qty) } : i) })),
     clearCart: () => set({ items: [] })
-}), { name: 'kss_cart_v2', storage: createJSONStorage(() => localStorage), skipHydration: true, partialize: state => ({ items: state.items }), merge: (persisted, current) => { const raw = (persisted as {
+}), { name: 'kss_cart_v2', storage: createJSONStorage(() => localStorage), skipHydration: true, partialize: state => ({ items: state.ownerId ? state.guestItems : state.items }), merge: (persisted, current) => { const raw = (persisted as {
         items?: unknown;
     })?.items; const unique = new Map<string, CartItem>(); if (Array.isArray(raw))
         for (const item of raw) {

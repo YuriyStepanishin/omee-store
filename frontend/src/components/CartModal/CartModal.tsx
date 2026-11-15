@@ -52,7 +52,7 @@ export default function CartModal() {
   const dialog = useRef<HTMLDialogElement>(null);
   const lock = useRef(false);
   const queryClient = useQueryClient();
-  const { items, isOpen, closeCart, changeQty, removeFromCart, clearCart } =
+  const { items, isOpen, closeCart, changeQty, removeFromCart, clearCart, syncing } =
     useCart();
   const {
     data: catalog,
@@ -66,7 +66,8 @@ export default function CartModal() {
   const [step, setStep] = useState<Step>('cart');
   const [mode, setMode] = useState<Mode>('delivery');
   const [form, setForm] = useState(defaults);
-  const [busy, setBusy] = useState(false);
+  const [busyState, setBusy] = useState(false);
+  const busy=busyState||syncing;
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
 
@@ -154,6 +155,7 @@ export default function CartModal() {
       clearCart();
       setStep('done');
       await queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      await queryClient.invalidateQueries({ queryKey: ['my-orders'] });
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -229,7 +231,8 @@ export default function CartModal() {
 
           {step === 'cart' && (
             <>
-              {!items.length && (
+              {syncing&&<p role="status">Завантажуємо кошик акаунта…</p>}
+              {!items.length && !syncing && (
                 <p className={css.empty}>
                   Кошик порожній. Оберіть товари в каталозі.
                 </p>

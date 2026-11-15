@@ -31,3 +31,5 @@ out/
 *.tsbuildinfo
 
 .next-production/
+.deploy-tools/
+.vercel/

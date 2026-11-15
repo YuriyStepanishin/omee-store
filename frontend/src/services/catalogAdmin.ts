@@ -8,6 +8,7 @@ export interface Category {
   isActive: boolean;
 }
 export interface ProductInput {
+  brandId?: string | null;
   categoryId: string;
   name: string;
   slug: string;
@@ -23,6 +24,8 @@ export interface ProductInput {
 export interface AdminProduct extends ProductInput {
   id: string;
   categoryName: string;
+  categorySlug?: string;
+  brand?: string;
   audience?: 'women' | 'men' | 'kids';
 }
 export interface ProductList {
@@ -69,3 +72,7 @@ export const classifyCatalogProducts = async () =>
       review: Array<{ id: string; name: string }>;
     }>('/admin/products/classify', {}, { timeout: 60000 })
   ).data;
+
+export const getBrands = async () => (await http.get<Category[]>('/admin/brands')).data;
+export const saveBrand = (data: Omit<Category, 'id'>, id?: string) => id ? http.put('/admin/brands/' + id, data) : http.post('/admin/brands', data);
+export const archiveBrand = (id: string) => http.delete('/admin/brands/' + id);

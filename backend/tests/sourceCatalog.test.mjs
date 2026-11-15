@@ -34,6 +34,7 @@ function database({ exists = true, imagePresent = false, fail = false } = {}) {
   return { calls, async query(sql, args) {
     calls.push({ sql, args });
     if (sql.startsWith('SELECT id FROM products')) return { rows: exists ? [{ id: 'product' }] : [], rowCount: exists ? 1 : 0 };
+    if (sql.startsWith('INSERT INTO brands')) return { rows: [{ id: 'brand' }] };
     if (sql.startsWith('INSERT INTO categories')) return { rows: [{ id: 'category' }] };
     if (sql.startsWith('INSERT INTO products')) return { rows: [{ id: 'product' }] };
     if (sql.startsWith('SELECT image_url FROM product_images')) return { rows: imagePresent ? [{ image_url: 'https://res.cloudinary.com/store/saved.png' }] : [] };
@@ -50,13 +51,15 @@ test('enrichment preserves managed product fields and reuses migrated images on 
   assert.equal(result.enriched, 1); assert.equal(result.imagesAdded, 0);
   assert.ok(!db.calls.some(c => c.sql.startsWith('INSERT INTO products')));
   const update = db.calls.find(c => c.sql.startsWith('UPDATE products'));
-  assert.equal(update.sql, 'UPDATE products SET characteristics=characteristics || $2::jsonb WHERE id=$1');
+  assert.equal(update.sql, 'UPDATE products SET characteristics=characteristics || $2::jsonb,brand_id=COALESCE(brand_id,$3) WHERE id=$1');
   assert.equal(db.calls.at(-1).sql, 'COMMIT');
 });
 test('new cards are unpublished with no stock and use existing Cloudinary receipts', async () => {
   const db = database({ exists: false });
   const result = await importSourceCatalog(db, [withImage()], { apply: true });
   assert.equal(result.inserted, 1); assert.equal(result.imagesAdded, 1);
+  assert.equal(db.calls.find(c=>c.sql.startsWith('INSERT INTO products')).args[7], 'brand');
+  assert.notEqual(db.calls.find(c=>c.sql.startsWith('INSERT INTO categories')).args[0], 'Example');
   assert.match(db.calls.find(c => c.sql.startsWith('INSERT INTO products')).sql, /0,\$6,false/);
   assert.equal(db.calls.find(c => c.sql.startsWith('INSERT INTO product_images')).args[1], 'https://res.cloudinary.com/store/saved.png');
 });

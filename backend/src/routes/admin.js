@@ -9,14 +9,15 @@ import {
 } from '../validators/admin.js';
 import { adminOrders } from '../models/adminOrders.js';
 import { adminArticles } from '../models/adminArticles.js';
+import { mailConfigured } from '../services/mail.js';
 export function adminRoutes(config) {
   const router = Router();
   router.use(
-    ['/admin/orders', '/admin/articles', '/admin/content/banners'],
+    ['/admin/orders', '/admin/articles', '/admin/content/banners', '/admin/overview', '/admin/customers', '/admin/settings'],
     requireRole(config, 'ADMIN')
   );
   router.use(
-    ['/admin/orders', '/admin/articles', '/admin/content/banners'],
+    ['/admin/orders', '/admin/articles', '/admin/content/banners', '/admin/overview', '/admin/customers', '/admin/settings'],
     (req, res, next) => {
       res.set('Cache-Control', 'no-store');
       if (config.mode !== 'postgres')
@@ -27,6 +28,18 @@ export function adminRoutes(config) {
     }
   );
   const orders = () => adminOrders(getPool(config.databaseUrl));
+  router.get('/admin/overview', async (req, res) => {
+    const { rows } = await getPool(config.databaseUrl).query("SELECT (SELECT count(*)::int FROM products) AS products, (SELECT count(*)::int FROM orders) AS orders, (SELECT count(*)::int FROM orders WHERE status='NEW') AS new_orders, (SELECT count(*)::int FROM users WHERE role='CUSTOMER') AS customers");
+    res.json(rows[0]);
+  });
+  router.get('/admin/customers', async (req, res) => {
+    const page = Number(req.query.page || 1);
+    if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) return res.status(400).json({message:'Некоректна сторінка.'});
+    const pool = getPool(config.databaseUrl);
+    const { rows } = await pool.query("SELECT id,name,email,phone,created_at FROM users WHERE role='CUSTOMER' ORDER BY created_at DESC,id LIMIT 50 OFFSET $1", [(page-1)*50]);
+    res.json({items:rows});
+  });
+  router.get('/admin/settings', (req, res) => res.json({emailRecoveryConfigured:mailConfigured(config)}));
   const articles = () => adminArticles(getPool(config.databaseUrl));
   router.get('/admin/orders', async (req, res) =>
     res.json(await orders().list(validate(orderListSchema, req.query)))

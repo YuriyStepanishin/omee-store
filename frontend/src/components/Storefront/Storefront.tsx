@@ -7,13 +7,12 @@ import ProductCard, {
   canAddProduct,
 } from '@/components/ProductCard/ProductCard';
 import ProductModal from '@/components/ProductModal/ProductModal';
-import { useAuthStore } from '@/store/auth';
 import Link from 'next/link';
 import { PRODUCT_LINES, type ProductLine } from '@/constants/productLines';
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCatalog, fetchAdminCatalog } from '@/services/storeApi';
+import { fetchCatalog } from '@/services/storeApi';
 import { useCart } from '@/hooks/useCart';
 import css from './Storefront.module.css';
 const cx = (value: string) =>
@@ -59,18 +58,14 @@ function UsefulPagination({
 }
 import type { Product } from '@/types/store';
 export default function App() {
-  const user = useAuthStore(state => state.user);
-  const loaded = useAuthStore(state => state.loaded);
-  const preview = user?.role === 'ADMIN';
   const {
     data: catalog,
     error,
     isPending,
     refetch,
   } = useQuery({
-    queryKey: ['catalog', preview ? 'admin' : 'public'],
-    queryFn: preview ? fetchAdminCatalog : fetchCatalog,
-    enabled: loaded,
+    queryKey: ['catalog', 'public'],
+    queryFn: fetchCatalog,
   });
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
@@ -84,6 +79,9 @@ export default function App() {
   const [usefulPage, setUsefulPage] = useState(0);
   const { items, addToCart, openCart } = useCart();
   const products = catalog?.products ?? [];
+  const aboutParagraphs=(catalog?.info.description||'').split(/\n\s*\n/).map(paragraph=>paragraph.trim()).filter(Boolean);
+  const aboutSections=aboutParagraphs.slice(1,aboutParagraphs.length>3?-1:undefined);
+  const aboutTagline=aboutParagraphs.length>3?aboutParagraphs.at(-1):null;
   useEffect(() => {
     const updateColumns = () =>
       setUsefulColumns(
@@ -158,13 +156,6 @@ export default function App() {
             <button type="button" className={cx('cart-notice-link')} onClick={openCart}>
               Переглянути кошик →
             </button>
-          </div>
-        )}
-        {catalog.preview && (
-          <div className={cx('preview-note')} role="status">
-            Перегляд адміністратора: показані також чернетки. Покупці бачать
-            лише опубліковані товари.{' '}
-            <Link href="/admin/products">Керувати товарами →</Link>
           </div>
         )}
         {catalog.info.announcement && (
@@ -264,7 +255,7 @@ export default function App() {
               Знайдено товарів: {visible.length}
             </p>
             <ProductResults
-              key={JSON.stringify([line, brand, category, search, preview])}
+              key={JSON.stringify([line, brand, category, search])}
               products={visible}
               renderItem={p => (
                 <ProductCard
@@ -339,14 +330,19 @@ export default function App() {
           </div>
         </section>
         <section className={cx('section section--alt')} id="about">
-          <div className={cx('container')}>
-            <h2 className={cx('section__title')}>{catalog.info.heading}</h2>
-            <p>{catalog.info.description}</p>
-            <ul className={cx('about__list')}>
-              {catalog.info.points.map(point => (
-                <li key={point}>{point}</li>
-              ))}
-            </ul>
+          <div className={cx('container about__layout')}>
+            <div>
+              <p className={cx('about__eyebrow')}>Про магазин</p>
+              <h2 className={cx('section__title')}>{catalog.info.heading}</h2>
+              {aboutParagraphs[0]&&<p className={cx('about__lead')}>{aboutParagraphs[0]}</p>}
+            </div>
+            {aboutSections.length>0&&<div className={cx('about__sections')}>
+              {aboutSections.map((paragraph,index)=><div key={index}>
+                {index<2&&<h3>{index===0?'Наша місія':'Наші цілі'}</h3>}
+                <p>{paragraph}</p>
+              </div>)}
+            </div>}
+            {aboutTagline&&<p className={cx('about__tagline')}>{aboutTagline}</p>}
           </div>
         </section>
       </main>

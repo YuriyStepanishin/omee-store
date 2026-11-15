@@ -5,6 +5,14 @@ import {articleRepository} from '../models/articles.js';
 import {publishHairArticles} from '../services/publishHairArticles.js';
 export function articleRoutes(config){
  const router=Router();
+ 
+ router.use((req,res,next)=>{
+   if(req.method==='GET'&&!req.path.startsWith('/admin')){
+     res.set('Cache-Control','public, max-age=60, s-maxage=3600, stale-while-revalidate=604800');
+   }
+   next();
+ });
+ 
  const repo=()=>articleRepository(getPool(config.databaseUrl));
  router.get('/articles',async(req,res)=>res.json(config.mode==='postgres'?await repo().list():[]));
  router.get('/articles/:slug',async(req,res)=>{

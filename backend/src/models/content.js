@@ -19,6 +19,15 @@ const missing = () =>
   Object.assign(new Error('Запис не знайдено.'), { status: 404 });
 export function contentRepository(pool) {
   return {
+    async publicInfo() {
+      try {
+        const result=await pool.query("SELECT value FROM site_settings WHERE key='info'");
+        return siteInfo(result.rows[0]?.value);
+      } catch(error) {
+        if(error.code==='42P01')return infoDefault;
+        throw error;
+      }
+    },
     async publicContent() {
       try {
         const [settings, media, banners] = await Promise.all([

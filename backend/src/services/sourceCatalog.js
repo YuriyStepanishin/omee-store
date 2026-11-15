@@ -1,3 +1,5 @@
+import {inferProductGroups} from './inferProductGroups.js';
+import {GROUP_SOURCES} from './productGroups.js';
 import { createHash } from 'node:crypto';
 
 export function normalizeSource(row, file) {
@@ -40,23 +42,28 @@ export async function importSourceCatalog(client, records, { apply = false } = {
   try {
     await client.query("SELECT pg_advisory_xact_lock(hashtext('catalog-source-import'))");
     for (const row of records) {
+      const brandSlug = 'brand-' + createHash('sha256').update(row.brand).digest('hex').slice(0, 12);
+      const brand = (await client.query('INSERT INTO brands(name,slug) VALUES($1,$2) ON CONFLICT (lower(name)) DO UPDATE SET name=brands.name RETURNING id', [row.brand, brandSlug])).rows[0];
+      if (!brand) throw Error('Could not resolve product brand');
       const found = await client.query(
         "SELECT id FROM products WHERE sku=$1 OR characteristics->>'sourceUrl'=ANY($2::text[]) OR characteristics->'sourceData'->>'url'=ANY($2::text[]) OR characteristics->'sourceUrls' ?| $2::text[]",
         [row.sku, row.sourceUrls]);
       if (found.rowCount > 1) throw Error('Ambiguous existing source URL');
       let id = found.rows[0]?.id;
       if (id) {
-        await client.query('UPDATE products SET characteristics=characteristics || $2::jsonb WHERE id=$1',
-          [id, JSON.stringify(row.characteristics)]);
+        await client.query('UPDATE products SET characteristics=characteristics || $2::jsonb,brand_id=COALESCE(brand_id,$3) WHERE id=$1',
+          [id, JSON.stringify(row.characteristics), brand.id]);
         summary.enriched++;
       } else {
-        const slug = 'import-' + createHash('sha256').update(row.brand).digest('hex').slice(0, 12);
+        const inferred = inferProductGroups({name:row.name,description:row.description,characteristics:row.characteristics});
+        const group = GROUP_SOURCES.find(item => item.name === inferred.groups[0]) || {name:'Інший догляд за волоссям',slug:'other-hair-care'};
+        const slug = group.slug;
         const category = await client.query(
           'INSERT INTO categories(name,slug) VALUES($1,$2) ON CONFLICT(slug) DO UPDATE SET slug=EXCLUDED.slug RETURNING id',
-          [row.brand, slug]);
+          [group.name, slug]);
         const result = await client.query(
-          'INSERT INTO products(category_id,name,slug,description,price,stock,sku,is_active,characteristics) VALUES($1,$2,$3,$4,$5,0,$6,false,$7) RETURNING id',
-          [category.rows[0].id, row.name, 'import-' + row.key, row.description, row.price, row.sku, JSON.stringify(row.characteristics)]);
+          'INSERT INTO products(category_id,name,slug,description,price,stock,sku,is_active,characteristics,brand_id) VALUES($1,$2,$3,$4,$5,0,$6,false,$7,$8) RETURNING id',
+          [category.rows[0].id, row.name, 'import-' + row.key, row.description, row.price, row.sku, JSON.stringify(row.characteristics), brand.id]);
         id = result.rows[0].id; summary.inserted++;
       }
       const existing = await client.query('SELECT image_url FROM product_images WHERE product_id=$1', [id]);

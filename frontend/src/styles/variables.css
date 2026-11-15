@@ -1,18 +1,22 @@
 :root {
  --color-brand-lime:#cad982; --color-brand-chocolate:#4c352e; --color-brand-beige:#dfbca4;
- --color-bg:#faf9f3; --color-surface:#ffffff; --color-bg-alt:#f0f1e4;
- --color-primary:#4c352e; --color-primary-hover:#34231e; --color-primary-soft:#edf2d6; --color-on-primary:#ffffff;
- --color-text:#382a25; --color-muted:#70665e; --color-border:#dedecd; --color-error:#af303a;
- --color-hero:#cad982; --color-footer:#342720; --color-footer-text:#f6f2e6;
- --radius-lg:24px; --radius-md:16px; --shadow-soft:0 12px 36px rgb(76 53 46 / 7%);
- --container-width:1280px; --transition:180ms ease; --font-main:'Segoe UI',Arial,sans-serif;
- --font-display:'Segoe UI',Arial,sans-serif;
+ --color-bg:#f7f5e9; --color-surface:#fffdf6; --color-bg-alt:#ecefd9;
+ --color-primary:#4c352e; --color-primary-hover:#34231e; --color-primary-soft:#e8edcc; --color-on-primary:#fffdf6;
+ --color-text:#3e2d27; --color-muted:#726354; --color-border:#dcd9c4; --color-error:#af303a;
+ --color-page-glow:rgb(202 217 130 / 18%);
+ --color-hero:#cad982; --color-footer:#cad982; --color-footer-text:#4c352e;
+ --color-chrome-accent:#4c352e; --color-chrome-on-accent:#cad982;
+ --radius-lg:24px; --radius-md:16px; --shadow-soft:0 12px 36px rgb(76 53 46 / 8%);
+ --container-width:1280px; --transition:180ms ease; --font-main:var(--font-manrope),'Segoe UI',Arial,sans-serif;
+ --font-display:var(--font-unbounded),var(--font-manrope),'Segoe UI',sans-serif;
  color-scheme:light;
 }
 [data-theme='dark'] {
- --color-bg:#1d1916; --color-surface:#29231e; --color-bg-alt:#231f19;
- --color-primary:#cad982; --color-primary-hover:#dfeba4; --color-primary-soft:#363d26; --color-on-primary:#29231e;
- --color-text:#f6f2e6; --color-muted:#c1b5a7; --color-border:#504438; --color-error:#ffaaaa;
- --color-hero:#303822; --color-footer:#15120f; --color-footer-text:#f6f2e6;
+ --color-bg:#241b18; --color-surface:#30241f; --color-bg-alt:#2b241c;
+ --color-primary:#cad982; --color-primary-hover:#dfeba4; --color-primary-soft:#383b27; --color-on-primary:#30241f;
+ --color-text:#f5ebdb; --color-muted:#c9b8a5; --color-border:#584639; --color-error:#ffaaaa;
+ --color-page-glow:rgb(202 217 130 / 4%);
+ --color-hero:#303822; --color-footer:#4c352e; --color-footer-text:#cad982;
+ --color-chrome-accent:#cad982; --color-chrome-on-accent:#4c352e;
  --shadow-soft:0 12px 36px rgb(0 0 0 / 18%); color-scheme:dark;
 }

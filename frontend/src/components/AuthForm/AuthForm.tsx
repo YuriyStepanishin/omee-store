@@ -44,16 +44,18 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       return;
     }
     try {
-      const user = await (isRegister ? registerAccount(values) : login(values));
+      const user = await (isRegister ? registerAccount({...values,confirmPassword}) : login(values));
       setSession(user);
-      router.replace('/profile');
+      router.replace(user.role === 'ADMIN' ? '/admin' : '/profile');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Не вдалося увійти.');
     }
   }
   return (
     <main className={css.page}>
-      <h1>{isRegister ? 'Зареєструватися' : 'Вхід до магазину'}</h1>
+      <p className={css.brand}>omee store</p>
+      <h1>{isRegister ? 'Зареєструватися' : 'Вхід до облікового запису'}</h1>
+      <p className={css.subtitle}>{isRegister ? 'Створіть обліковий запис' : 'Введіть дані для входу'}</p>
       <form className={css.form} onSubmit={handleSubmit(submit)} noValidate>
         {isRegister && (
           <label>
@@ -75,6 +77,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           <input
             {...register('email')}
             type="email"
+            placeholder="example@gmail.com"
             autoComplete="email"
             maxLength={254}
             disabled={isSubmitting}
@@ -89,6 +92,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           <div className={css.passwordControl}>
             <input
               id="auth-password"
+              placeholder="Введіть пароль"
               {...register('password')}
               type={showPassword ? 'text' : 'password'}
               autoComplete={isRegister ? 'new-password' : 'current-password'}
@@ -129,6 +133,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             )}
           </label>
         )}
+        {!isRegister && <Link className={css.forgot} href="/forgot-password">Забули пароль?</Link>}
         <button disabled={isSubmitting}>
           {isSubmitting
             ? 'Зачекайте…'

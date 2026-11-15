@@ -1,12 +1,17 @@
 @import './variables.css';
 @import './reset.css';
 *,*::before,*::after{box-sizing:border-box;}
-body{margin:0;font-family:var(--font-main);color:var(--color-text);background:var(--color-bg);line-height:1.6;-webkit-font-smoothing:antialiased;}
+body{margin:0;font-family:var(--font-main);color:var(--color-text);background:radial-gradient(ellipse at top left,var(--color-page-glow),transparent 65%),var(--color-bg);line-height:1.65;-webkit-font-smoothing:antialiased;}
+h1,h2{font-family:var(--font-display);font-weight:400;letter-spacing:-.035em;line-height:1.3;text-wrap:balance;overflow-wrap:anywhere;}
+h3,h4{letter-spacing:-.015em;}
 html{scroll-padding-top:140px;scroll-behavior:smooth;}
 button,input,select,textarea{font:inherit;}
 button,input,select,textarea{color:var(--color-text);}
 input,select,textarea{background:var(--color-surface);accent-color:var(--color-primary);}
 input::placeholder,textarea::placeholder{color:var(--color-muted);opacity:1;}
+input,select,textarea{transition:border-color var(--transition),box-shadow var(--transition);}
+input:focus-visible,select:focus-visible,textarea:focus-visible{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-primary-soft);}
+button,a{ -webkit-tap-highlight-color:transparent;}
 button:disabled{opacity:.55;cursor:not-allowed;}
 button,a,input,select,textarea{touch-action:manipulation;}
 :focus-visible{outline:3px solid var(--color-primary);outline-offset:4px;}

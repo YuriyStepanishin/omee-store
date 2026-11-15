@@ -11,7 +11,7 @@ export function signSession(user, config) {
   const id = randomUUID();
   return {
     id,
-    access: jwt.sign({ type: 'access' }, config.accessSecret, {
+    access: jwt.sign({ type: 'access', issuedAt: Date.now() }, config.accessSecret, {
       ...options,
       subject: user.id,
       expiresIn: '15m',

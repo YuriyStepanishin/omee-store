@@ -18,10 +18,10 @@ test('public catalog search, categories and product details all exclude unpublis
  await repo.categories();
  await repo.products({q:'conditioner',page:1,limit:20,sort:'newest'});
  await assert.rejects(()=>repo.product('11111111-1111-4111-8111-111111111111'));
- assert.match(calls[0],/WHERE is_active/);
- assert.match(calls[1],/p\.is_active AND c\.is_active/);
- assert.match(calls[2],/p\.is_active AND c\.is_active/);
- assert.match(calls[3],/p\.is_active AND c\.is_active/);
+ assert.match(calls[0],/\bWHERE\b.*\bis_active\b/);
+ assert.match(calls[1],/\bp\.is_active AND c\.is_active\b/);
+ assert.match(calls[2],/\bp\.is_active AND c\.is_active\b/);
+ assert.match(calls[3],/\bp\.is_active AND c\.is_active\b/);
 });
 test('admin catalog continues to include drafts for editing',async()=>{
  const calls=[];

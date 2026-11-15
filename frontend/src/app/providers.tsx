@@ -1,9 +1,9 @@
 'use client';
 import SessionBootstrap from '@/components/SessionBootstrap/SessionBootstrap';
+import CartSync from '@/components/CartModal/CartSync';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
-import { useCartStore } from '@/store/cart';
+import { useState, type ReactNode } from 'react';
 export default function Providers({ children }: {
     children: ReactNode;
-}) { const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 60000, retry: 1 } } })); useEffect(() => { void useCartStore.persist.rehydrate(); }, []); return <QueryClientProvider client={client}><SessionBootstrap />{children}</QueryClientProvider>; }
+}) { const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 60000, retry: 1 } } })); return <QueryClientProvider client={client}><SessionBootstrap /><CartSync />{children}</QueryClientProvider>; }
