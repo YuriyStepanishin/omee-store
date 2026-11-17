@@ -57,7 +57,7 @@ test('wishlist insert is idempotent, rejects unpublished products and removal is
 });
 test('checkout saves trusted account ownership and immutable product names with the order',async()=>{
   const calls=[];
-  const client={query:async(sql,args)=>{calls.push({sql,args});return {rows:sql.startsWith('SELECT id,price')?[{id:productId,name:'Збережена назва',sku:'SKU-1',price:'100.00',stock:5,is_active:true}]:[]};},release(){}};
+  const client={query:async(sql,args)=>{calls.push({sql,args});return {rows:sql.includes('JOIN product_variants v')?[{id:productId,name:'Збережена назва',sku:'SKU-1',price:'100.00',stock:5,is_active:true,variant_active:true,variant_id:'33333333-3333-4333-8333-333333333333'}]:[]};},release(){}};
   const payload={items:[{productId,qty:1}],userId:'attacker',payment:{fullName:'Тест Покупець',phone:'+380961234567',email:'test@example.com',city:'Хмельницький',address:'Відділення 1',method:'on_confirmation',deliveryCarrier:'nova_poshta',deliveryType:'branch'}};
   await createOrder({connect:async()=>client},payload,userId);
   assert.equal(calls.find(call=>call.sql.startsWith('INSERT INTO orders')).args[8],userId);
