@@ -95,7 +95,7 @@ export default function CartModal() {
 
   const lines = items.map(item => ({
     ...item,
-    product: catalog?.products.find(p => p.id === item.productId),
+    product: (()=>{const base=catalog?.products.find(p=>p.id===item.productId||p.variants?.some(v=>v.sourceProductId===item.productId));const variant=base?.variants?.find(v=>v.sourceProductId===item.productId);return base&&variant?{...base,price:variant.price,oldPrice:variant.oldPrice,stock:variant.stock,sku:variant.sku,title:base.title+(variant.volume!==null?` · ${variant.volume} ${variant.unit||''}`:'')}:base;})(),
   }));
   const ready = Boolean(catalog);
   const orderable = lines.flatMap(line =>
