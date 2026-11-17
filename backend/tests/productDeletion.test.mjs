@@ -1,11 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {catalogRepository} from '../src/models/catalogAdmin.js';
-test('permanent deletion issues one parameterized DELETE; database cascades product-owned records',async()=>{
- let call;const repo=catalogRepository({async query(sql,args){call={sql,args};return {rowCount:1};}});
- await repo.deleteProduct('id');assert.equal(call.sql,'DELETE FROM products WHERE id=$1 RETURNING id');assert.deepEqual(call.args,['id']);
+const poolFor=(handler)=>({connect:async()=>({query:handler,release(){}})});
+test('permanent deletion removes standalone variant before its product in a transaction',async()=>{
+ const calls=[];
+ const repo=catalogRepository(poolFor(async(sql,args)=>{calls.push({sql,args});if(sql.startsWith('SELECT id FROM products'))return {rows:[{id:'id'}]};return {rows:[],rowCount:0};}));
+ await repo.deleteProduct('id');
+ assert.ok(calls.some(c=>c.sql.startsWith('DELETE FROM product_variants')));
+ assert.ok(calls.some(c=>c.sql.startsWith('DELETE FROM products')));
+ assert.equal(calls.at(-1).sql,'COMMIT');
 });
-test('missing products return 404; products in orders remain protected with a useful error',async()=>{
- await assert.rejects(()=>catalogRepository({query:async()=>({rowCount:0})}).deleteProduct('missing'),{status:404});
- await assert.rejects(()=>catalogRepository({query:async()=>{throw {code:'23503'};}}).deleteProduct('ordered'),{status:409,message:'Товар є у замовленнях. Його можна приховати, але не видалити.'});
+test('missing products return 404; merged products are protected',async()=>{
+ const missing=catalogRepository(poolFor(async(sql)=>sql.startsWith('SELECT id FROM products')?{rows:[]}: {rows:[]}));
+ await assert.rejects(()=>missing.deleteProduct('missing'),{status:404});
+ const merged=catalogRepository(poolFor(async(sql)=>sql.startsWith('SELECT id FROM products')?{rows:[{id:'id'}]}:sql.includes('FROM product_variants WHERE product_id')?{rowCount:1}:{rowCount:0}));
+ await assert.rejects(()=>merged.deleteProduct('merged'),{status:409});
 });

@@ -5,7 +5,7 @@ export function articleRepository(pool){return {
   catch(error){if(error.code==='42P01')return [];throw error;}
  },
  async bySlug(slug){
-  const {rows}=await pool.query(`SELECT ${summaryColumns},body,seo_title AS "seoTitle",seo_description AS "seoDescription",sources FROM public.blog_posts WHERE slug=$1 AND status='published' AND published_at<=now()`,[slug]);
+  const {rows}=await pool.query(`SELECT ${summaryColumns},body,seo_title AS "seoTitle",seo_description AS "seoDescription",sources,media FROM public.blog_posts WHERE slug=$1 AND status='published' AND published_at<=now()`,[slug]);
   return rows[0]||null;
  }
 };}

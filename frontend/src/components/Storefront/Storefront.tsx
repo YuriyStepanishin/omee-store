@@ -118,16 +118,19 @@ export default function App() {
         .toLocaleLowerCase('uk')
         .includes(search.toLocaleLowerCase('uk'))
   );
-  function addProduct(product: Product) {
-    if (busy || !canAddProduct(product)) return;
-    const current = items.find(item => item.productId === product.id)?.qty || 0;
-    if (current >= Math.min(99, product.stock ?? 99)) {
+  function addProduct(product: Product, sourceProductId?: string) {
+    const variant=product.variants?.find(v=>v.sourceProductId===(sourceProductId||product.id))||product.variants?.find(v=>v.isActive);
+    const chosen=variant?{...product,price:variant.price,stock:variant.stock}:product;
+    const cartProductId=variant?.sourceProductId||product.id;
+    if (busy || !canAddProduct(chosen)) return;
+    const current = items.find(item => item.productId === cartProductId)?.qty || 0;
+    if (current >= Math.min(99, chosen.stock ?? 99)) {
       setCartNotice(
         'У кошику вже максимальна доступна кількість цього товару.'
       );
       return;
     }
-    addToCart(product.id);
+    addToCart(cartProductId);
     setLastAdded(product.id);
     setCartNotice(product.title + ' — додано до кошика.');
   }
@@ -263,7 +266,7 @@ export default function App() {
                   product={p}
                   busy={busy}
                   added={lastAdded === p.id}
-                  onAdd={() => addProduct(p)}
+                  onAdd={() => setSelectedProduct(p)}
                   onOpen={() => setSelectedProduct(p)}
                 />
               )}
@@ -352,7 +355,7 @@ export default function App() {
           product={selectedProduct}
           busy={busy}
           added={lastAdded === selectedProduct.id}
-          onAdd={() => addProduct(selectedProduct)}
+          onAdd={(sourceProductId) => addProduct(selectedProduct,sourceProductId)}
           onClose={() => setSelectedProduct(null)}
         />
       )}

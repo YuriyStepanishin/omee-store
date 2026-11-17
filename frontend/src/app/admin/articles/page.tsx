@@ -10,6 +10,8 @@ import {
   type ArticleInput,
 } from '@/services/admin';
 import css from '../Admin.module.css';
+import {uploadPhoto} from '@/services/catalogAdmin';
+import {uploadVideo} from '@/services/contentAdmin';
 const empty: ArticleInput = {
   slug: '',
   title: '',
@@ -20,6 +22,7 @@ const empty: ArticleInput = {
   seoTitle: '',
   seoDescription: '',
   sources: [],
+  media: [],
   status: 'draft',
 };
 export default function Articles() {
@@ -63,7 +66,7 @@ export default function Articles() {
     try {
       const { id: loadedId, ...input } = await getAdminArticle(articleId);
       setId(loadedId);
-      setForm(input);
+      setForm({...input,media:input.media||[]});
     } catch (e) {
       setFailed(true);
       setMessage(e instanceof Error ? e.message : 'Помилка завантаження.');
@@ -148,7 +151,7 @@ export default function Articles() {
           </ul>
         </section>
         <section className={css.panel}>
-          <h2>{id ? 'Редагувати статтю' : 'Нова стаття'}</h2>
+          <h2>{id ? 'Редагувати публікацію' : 'Нова публікація'}</h2>
           <form className={css.form} onSubmit={submit}>
             <fieldset disabled={busy}>
               {(
@@ -216,6 +219,16 @@ export default function Articles() {
                   }
                 />
               </label>
+              <h3>Фото та відео цієї публікації</h3>
+              <p className={css.muted}>Один запис журналу може містити текст, кілька фото та відео. Кожен файл додається окремо.</p>
+              {form.media.map((item,i)=><div className={css.form} key={i}>
+                <strong>{item.type==='photo'?'Фото':'Відео'} №{i+1}</strong>
+                <label>HTTPS-посилання<input type="url" required value={item.url} onChange={e=>setForm(current=>({...current,media:current.media.map((v,n)=>n===i?{...v,url:e.target.value}:v)}))}/></label>
+                <label>Завантажити {item.type==='photo'?'фото (до 5 МБ)':'відео (до 25 МБ)'}<input type="file" accept={item.type==='photo'?'image/jpeg,image/png,image/webp':'video/mp4,video/webm'} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;e.target.value='';if(busy)return;setBusy(true);try{if(file.size>(item.type==='photo'?5:25)*1024*1024)throw Error('Файл перевищує допустимий розмір.');const url=await (item.type==='photo'?uploadPhoto(file):uploadVideo(file));setForm(current=>({...current,media:current.media.map((v,n)=>n===i?{...v,url}:v)}));setMessage('Файл завантажено. Збережіть публікацію.');}catch(error){setFailed(true);setMessage(error instanceof Error?error.message:'Помилка завантаження.');}finally{setBusy(false);}}}/></label>
+                <label>Підпис<input maxLength={300} value={item.caption} onChange={e=>setForm(current=>({...current,media:current.media.map((v,n)=>n===i?{...v,caption:e.target.value}:v)}))}/></label>
+                <button type="button" className={css.button+' '+css.danger} onClick={()=>setForm(current=>({...current,media:current.media.filter((_,n)=>n!==i)}))}>Прибрати {item.type==='photo'?'фото':'відео'}</button>
+              </div>)}
+              <div className={css.actions}><button type="button" className={css.button} disabled={form.media.length>=20} onClick={()=>setForm(current=>({...current,media:[...current.media,{type:'photo',url:'',caption:''}]}))}>+ Додати фото</button><button type="button" className={css.button} disabled={form.media.length>=20} onClick={()=>setForm(current=>({...current,media:[...current.media,{type:'video',url:'',caption:''}]}))}>+ Додати відео</button></div>
               <h3>Джерела</h3>
               {form.sources.map((source, i) => (
                 <div className={css.form} key={i}>
@@ -319,7 +332,7 @@ export default function Articles() {
               </label>
               <div className={css.actions}>
                 <button className={css.button + ' ' + css.primary}>
-                  {busy ? 'Збереження…' : 'Зберегти статтю'}
+                  {busy ? 'Збереження…' : 'Зберегти публікацію'}
                 </button>
                 <button type="button" className={css.button} onClick={reset}>
                   Нова стаття

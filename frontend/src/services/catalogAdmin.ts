@@ -76,3 +76,4 @@ export const classifyCatalogProducts = async () =>
 export const getBrands = async () => (await http.get<Category[]>('/admin/brands')).data;
 export const saveBrand = (data: Omit<Category, 'id'>, id?: string) => id ? http.put('/admin/brands/' + id, data) : http.post('/admin/brands', data);
 export const archiveBrand = (id: string) => http.delete('/admin/brands/' + id);
+export const setProductPublication=(id:string,isActive:boolean)=>http.patch('/admin/products/'+id+'/publication',{isActive});

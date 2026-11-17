@@ -41,6 +41,7 @@ export function catalogRoutes(config){const router=Router();
  router.post('/products',admin,async(req,res)=>{const data=validate(productSchema,req.body);await verifyUploadedUrls(data.images,'image');res.status(201).json(await repo().saveProduct(data));});
  router.put('/products/:id/line',admin,async(req,res)=>{const {audience}=validate(audienceSchema,req.body);res.json(await repo().saveAudience(validateId(req.params.id),audience));});
  router.put('/products/:id',admin,async(req,res)=>{const data=validate(productSchema,req.body);await verifyUploadedUrls(data.images,'image');res.json(await repo().saveProduct(data,validateId(req.params.id)));});
+ router.patch('/admin/products/:id/publication',admin,async(req,res)=>{if(typeof req.body?.isActive!=='boolean')return res.status(400).json({message:'isActive має бути boolean.'});res.json(await repo().setPublication(validateId(req.params.id),req.body.isActive));});
  router.delete('/admin/products/:id',admin,async(req,res)=>{await repo().deleteProduct(validateId(req.params.id));res.status(204).end();});
  router.delete('/products/:id',admin,async(req,res)=>{await repo().archiveProduct(validateId(req.params.id));res.status(204).end();});
  router.post('/upload',admin,uploadSlot,multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1,fields:0,parts:1}}).single('image'),async(req,res)=>res.status(201).json(await uploadImage(req.file)));

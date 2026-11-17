@@ -55,6 +55,7 @@ export const articleSchema = z
     seoTitle: z.string().trim().min(1).max(160),
     seoDescription: z.string().trim().min(1).max(320),
     sources: z.array(source).max(10),
+    media: z.array(z.object({type:z.enum(['photo','video']),url:z.string().url().max(2000).refine(v=>v.startsWith('https://')),caption:z.string().max(300).default('')}).strict()).max(20).default([]),
     status: z.enum(['draft', 'published']),
   })
   .strict();
