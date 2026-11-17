@@ -27,7 +27,7 @@ test('PostgreSQL order locks stock, ignores client price and rolls back shortage
  const id='11111111-1111-4111-8111-111111111111';
  const p=payload();p.items[0].productId=id;
  let stock=5;let calls=[];let released=false;
- const client={async query(sql,args){calls.push({sql,args});if(sql.startsWith('SELECT id,price'))return {rows:[{id,price:'720.00',stock,is_active:true}]};return {rows:[]};},release(){released=true;}};
+ const client={async query(sql,args){calls.push({sql,args});if(sql.includes('JOIN product_variants v'))return {rows:[{id,price:'720.00',stock,is_active:true,variant_active:true,variant_id:'33333333-3333-4333-8333-333333333333'}]};return {rows:[]};},release(){released=true;}};
  const pool={async connect(){return client;}};
  const order=await createOrder(pool,p);
  assert.equal(order.amount,1440);assert.equal(order.status,'NEW');assert.ok(calls.some(c=>c.sql.includes('FOR UPDATE')));assert.equal(calls.find(c=>c.sql.startsWith('INSERT INTO orders')).args[1],'1440.00');assert.equal(calls.at(-1).sql,'COMMIT');assert.ok(released);
