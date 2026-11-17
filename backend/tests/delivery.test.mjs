@@ -17,7 +17,7 @@ test('unknown or incomplete delivery selections are rejected',()=>{
 test('selected carrier is saved in PostgreSQL delivery_method and demo-order delivery',async()=>{
  const payment={fullName:'Тест Клієнт',phone:'+380971234567',email:'test@example.com',city:'Хмельницький',address:'29000, відділення №1',method:'on_confirmation',deliveryCarrier:'ukrposhta',deliveryType:'branch'};
  const id='11111111-1111-4111-8111-111111111111';const calls=[];
- const client={async query(sql,args){calls.push({sql,args});return {rows:sql.startsWith('SELECT id,price')?[{id,price:2000,stock:10,is_active:true}]:[]};},release(){}};
+ const client={async query(sql,args){calls.push({sql,args});return {rows:sql.includes('JOIN product_variants v')?[{id,price:2000,stock:10,is_active:true,variant_active:true,variant_id:'33333333-3333-4333-8333-333333333333'}]:[]};},release(){}};
  await createOrder({connect:async()=>client},{items:[{productId:id,qty:1}],payment});
  const insert=calls.find(c=>c.sql.startsWith('INSERT INTO orders'));assert.equal(insert.args[7],'ukrposhta:branch');assert.equal(insert.args[6],payment.address);
  assert.deepEqual(validateOrder({items:[{productId:'p-1',qty:1}],payment}).delivery,{method:'ukrposhta:branch',carrier:'ukrposhta',type:'branch'});
@@ -25,7 +25,7 @@ test('selected carrier is saved in PostgreSQL delivery_method and demo-order del
 test('products without a confirmed positive price cannot be ordered',async()=>{
  const payment={fullName:'Тест Клієнт',phone:'+380971234567',email:'test@example.com',city:'Хмельницький',address:'Відділення №1',method:'on_confirmation'};
  const id='11111111-1111-4111-8111-111111111111';const calls=[];
- const client={async query(sql){calls.push(sql);return {rows:sql.startsWith('SELECT id,price')?[{id,price:'0.00',stock:10,is_active:true}]:[]};},release(){}};
+ const client={async query(sql){calls.push(sql);return {rows:sql.includes('JOIN product_variants v')?[{id,price:'0.00',stock:10,is_active:true,variant_active:true,variant_id:'33333333-3333-4333-8333-333333333333'}]:[]};},release(){}};
  await assert.rejects(()=>createOrder({connect:async()=>client},{items:[{productId:id,qty:1}],payment}),{status:409});
  assert.equal(calls.at(-1),'ROLLBACK');
  assert.ok(!calls.some(sql=>sql.startsWith('INSERT INTO orders')));
