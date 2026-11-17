@@ -70,6 +70,7 @@ export interface ArticleInput {
   seoTitle: string;
   seoDescription: string;
   sources: Array<{ title: string; url: string; accessedAt: string }>;
+  media: Array<{type:'photo'|'video';url:string;caption:string}>;
   status: 'draft' | 'published';
 }
 export interface AdminArticle extends ArticleInput {
