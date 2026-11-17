@@ -11,7 +11,7 @@ export async function loadCatalog(pool,{includeDrafts=false}={}) {
   (p.is_active AND c.is_active) AS "isPublished",
   COALESCE((SELECT json_agg(image_url ORDER BY (image_url LIKE 'https://res.cloudinary.com/%') DESC,sort_order,id)
    FROM product_images WHERE product_id=p.id),'[]'::json) AS images
-  FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE NOT EXISTS (SELECT 1 FROM product_merge_audit a WHERE a.source_product_id=p.id AND a.canonical_product_id<>p.id) ${includeDrafts?'':'AND p.is_active AND c.is_active'} ORDER BY p.created_at DESC,p.id`);
+  FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE ${includeDrafts?'TRUE':'p.is_active AND c.is_active'} AND NOT EXISTS (SELECT 1 FROM product_merge_audit a WHERE a.source_product_id=p.id AND a.canonical_product_id<>p.id) ORDER BY p.created_at DESC,p.id`);
  return result.rows.map(row=>({...row,...catalogDetails(row),image:row.images[0]||'',price:Number(row.price),oldPrice:row.oldPrice===null?null:Number(row.oldPrice)}));
 }
 
