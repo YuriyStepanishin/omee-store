@@ -34,7 +34,7 @@ export function adminArticles(pool) {
         data.seoTitle,
         data.seoDescription,
         JSON.stringify(data.sources),
-        JSON.stringify(data.media),
+        JSON.stringify(data.media??[]),
         hash,
         data.status,
       ];
