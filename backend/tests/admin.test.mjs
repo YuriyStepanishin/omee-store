@@ -128,7 +128,7 @@ test('article writes preserve sources, derive hash and use parameterized data', 
   };
   await repo.save(data);
   await repo.save({ ...data, status: 'published' }, id);
-  assert.equal(calls[0].args[9].length, 64);
+  assert.equal(calls[0].args[10].length, 64);
   assert.ok(!calls[0].sql.includes(data.title));
   assert.equal(calls[1].args.at(-1), id);
   assert.ok(calls[1].sql.includes('COALESCE(published_at,now())'));
