@@ -13,12 +13,12 @@ export async function createOrder(pool,payload,userId=null) {
  const client=await pool.connect();
  try {
   await client.query('BEGIN');
-  const {rows}=await client.query('SELECT id,price,stock,is_active,name,sku FROM products WHERE id=ANY($1::uuid[]) AND EXISTS (SELECT 1 FROM categories WHERE categories.id=products.category_id AND categories.is_active) ORDER BY id FOR UPDATE',[[...ids]]);
-  const lines=payload.items.map(item=>{const p=rows.find(row=>row.id===item.productId);if(!p||!p.is_active||p.stock<item.qty||!Number.isFinite(Number(p.price))||Number(p.price)<=0)throw Object.assign(new Error('Товар недоступний або недостатньо залишку.'),{status:409});return {...item,price:p.price,cents:Math.round(Number(p.price)*100)};});
+  const {rows}=await client.query(`SELECT p.id,p.name,p.is_active,p.category_id,v.id AS variant_id,v.price,v.stock,v.sku,v.is_active AS variant_active FROM products p JOIN product_variants v ON v.source_product_id=p.id JOIN categories c ON c.id=p.category_id WHERE p.id=ANY($1::uuid[]) AND c.is_active ORDER BY p.id FOR UPDATE OF p,v`,[[...ids]]);
+  const lines=payload.items.map(item=>{const p=rows.find(row=>row.id===item.productId);if(!p||!p.is_active||!p.variant_active||p.stock<item.qty||!Number.isFinite(Number(p.price))||Number(p.price)<=0)throw Object.assign(new Error('Товар недоступний або недостатньо залишку.'),{status:409});return {...item,price:p.price,cents:Math.round(Number(p.price)*100),variantId:p.variant_id};});
   const totalCents=lines.reduce((sum,line)=>sum+line.cents*line.qty,0);
   const orderId=randomUUID();
   await client.query(`INSERT INTO orders(id,status,total,delivery_method,payment_method,customer_name,customer_phone,customer_email,city,address,user_id) VALUES($1,'NEW',$2,$8,'on_confirmation',$3,$4,$5,$6,$7,$9)`,[orderId,(totalCents/100).toFixed(2),customer.fullName.trim(),customer.phone.trim(),customer.email.trim(),customer.city.trim(),customer.address.trim(),delivery.method,userId]);
-  for(const line of lines){const product=rows.find(row=>row.id===line.productId);await client.query('INSERT INTO order_items(order_id,product_id,price,quantity,product_name,product_sku) VALUES($1,$2,$3,$4,$5,$6)',[orderId,line.productId,line.price,line.qty,product.name,product.sku]);await client.query('UPDATE products SET stock=stock-$1 WHERE id=$2',[line.qty,line.productId]);}
+  for(const line of lines){const product=rows.find(row=>row.id===line.productId);await client.query('INSERT INTO order_items(order_id,product_id,price,quantity,product_name,product_sku) VALUES($1,$2,$3,$4,$5,$6)',[orderId,line.productId,line.price,line.qty,product.name,product.sku]);await client.query('UPDATE product_variants SET stock=stock-$1 WHERE id=$2',[line.qty,line.variantId]);await client.query('UPDATE products SET stock=stock-$1 WHERE id=$2',[line.qty,line.productId]);}
   await client.query('COMMIT');
   return {orderId,status:'NEW',amount:totalCents/100};
  } catch(error){await client.query('ROLLBACK');throw error;} finally{client.release();}
