@@ -42,8 +42,7 @@
   font-weight: 600;
 }
 
-.nav a:hover,
-.nav a[aria-current='page'] {
+.nav a:hover {
   border-bottom-color: currentColor;
 }
 

@@ -84,7 +84,6 @@ export default function Header() {
           >
             <Link className={css.mobileOnly} href="/#catalog" onClick={closeMenu}>Каталог</Link>
             <Link href="/#media" onClick={closeMenu}>Журнал про корисне</Link>
-            <Link href="/delivery" aria-current={pathname === '/delivery' ? 'page' : undefined} onClick={closeMenu}>Доставка</Link>
             <Link href="/#about" onClick={closeMenu}>Про магазин</Link>
             <div className={css.mobileAccount}>
               <Link href={accountHref} onClick={closeMenu}>{user ? 'Профіль' : 'Увійти'}</Link>
