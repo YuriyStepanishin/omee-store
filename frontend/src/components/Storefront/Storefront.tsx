@@ -6,6 +6,7 @@ import ProductResults from '@/components/ProductResults/ProductResults';
 import ProductCard, {
   canAddProduct,
 } from '@/components/ProductCard/ProductCard';
+import {availableVariants, withPackaging} from '@/components/ProductCard/productPackaging';
 import ProductModal from '@/components/ProductModal/ProductModal';
 import Link from 'next/link';
 import { PRODUCT_LINES, type ProductLine } from '@/constants/productLines';
@@ -119,8 +120,10 @@ export default function App() {
         .includes(search.toLocaleLowerCase('uk'))
   );
   function addProduct(product: Product, sourceProductId?: string) {
-    const variant=product.variants?.find(v=>v.sourceProductId===(sourceProductId||product.id))||product.variants?.find(v=>v.isActive);
-    const chosen=variant?{...product,price:variant.price,stock:variant.stock}:product;
+    const variants = availableVariants(product);
+    const variant = sourceProductId ? variants.find(v => v.sourceProductId === sourceProductId) : variants[0];
+    if (product.variants?.length && !variant) return;
+    const chosen = withPackaging(product, variant);
     const cartProductId=variant?.sourceProductId||product.id;
     if (busy || !canAddProduct(chosen)) return;
     const current = items.find(item => item.productId === cartProductId)?.qty || 0;
@@ -266,7 +269,7 @@ export default function App() {
                   product={p}
                   busy={busy}
                   added={lastAdded === p.id}
-                  onAdd={() => setSelectedProduct(p)}
+                  onAdd={sourceProductId => sourceProductId ? addProduct(p,sourceProductId) : setSelectedProduct(p)}
                   onOpen={() => setSelectedProduct(p)}
                 />
               )}

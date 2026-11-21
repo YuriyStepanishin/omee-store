@@ -6,6 +6,7 @@ import DeliveryFields, {
   initialDeliverySelection,
 } from '@/components/DeliveryFields/DeliveryFields';
 import ProductPhoto from '@/components/ProductPhoto/ProductPhoto';
+import { packagingLabel, withPackaging } from '@/components/ProductCard/productPackaging';
 import { canAddProduct } from '@/components/ProductCard/ProductCard';
 import { useCart } from '@/hooks/useCart';
 import { checkoutOrder, fetchCatalog } from '@/services/storeApi';
@@ -98,7 +99,14 @@ export default function CartModal() {
 
   const lines = items.map(item => ({
     ...item,
-    product: (()=>{const base=catalog?.products.find(p=>p.id===item.productId||p.variants?.some(v=>v.sourceProductId===item.productId));const variant=base?.variants?.find(v=>v.sourceProductId===item.productId);return base&&variant?{...base,price:variant.price,oldPrice:variant.oldPrice,stock:variant.stock,sku:variant.sku,title:base.title+(variant.volume!==null?` · ${variant.volume} ${variant.unit||''}`:'')}:base;})(),
+    product: (() => {
+      const base = catalog?.products.find(p => p.id === item.productId || p.variants?.some(v => v.sourceProductId === item.productId));
+      if (!base) return undefined;
+      const variant = base.variants?.find(v => v.sourceProductId === item.productId);
+      if (!variant) return base.variants?.length ? undefined : base;
+      const chosen = withPackaging(base, variant);
+      return {...chosen, title: variant.volume == null ? chosen.title : `${chosen.title} · ${packagingLabel(variant)}`};
+    })(),
   }));
   const ready = Boolean(catalog);
   const orderable = lines.flatMap(line =>

@@ -1,3 +1,4 @@
+import type { ProductVariant } from '@/types/store';
 import { http } from './http';
 import { uploadToCloudinary } from './cloudinaryUpload';
 export interface Category {
@@ -20,9 +21,11 @@ export interface ProductInput {
   isActive: boolean;
   images: string[];
   characteristics: Record<string, string>;
+  variants?: Array<Omit<ProductVariant, 'id' | 'sourceProductId'> & {id?: string}>;
 }
 export interface AdminProduct extends ProductInput {
   id: string;
+  variants?: ProductVariant[];
   categoryName: string;
   categorySlug?: string;
   brand?: string;
