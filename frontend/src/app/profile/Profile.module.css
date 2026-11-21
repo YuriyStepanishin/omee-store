@@ -9,13 +9,11 @@
   box-shadow: var(--shadow-soft);
 }
 .heading { padding-right: 52px; }
-.adminHeading { padding-right: 104px; }
 .page h1 { margin: 8px 0 20px; font-size: clamp(22px, 3vw, 30px); line-height: 1.4; }
 .eyebrow { color: var(--color-muted); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-.close, .adminLink { position: absolute; top: 24px; right: 24px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-muted); }
-.close svg, .adminLink svg { width: 20px; height: 20px; }
-.close:hover, .adminLink:hover { color: var(--color-primary); background: var(--color-primary-soft); }
-.adminLink { right: 76px; background: var(--color-primary-soft); color: var(--color-primary); }
+.close { position: absolute; top: 24px; right: 24px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-muted); }
+.close svg { width: 20px; height: 20px; }
+.close:hover { color: var(--color-primary); background: var(--color-primary-soft); }
 .details { display: grid; gap: 4px; padding-bottom: 24px; border-bottom: 1px solid var(--color-border); color: var(--color-muted); overflow-wrap: anywhere; }
 .navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-block: 24px; }
 .navigation a { position: relative; display: grid; align-content: center; gap: 6px; min-height: 112px; padding: 20px 40px 20px 20px; border: 1px solid var(--color-border); border-radius: var(--radius-md); transition: background var(--transition), border-color var(--transition); }
@@ -23,6 +21,7 @@
 .navigation strong { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 .navigation span { font-size: 13px; color: var(--color-muted); }
 .navigation .arrow { position: absolute; top: 18px; right: 18px; font-size: 20px; color: var(--color-primary); }
+.navigation .admin { grid-column: 1 / -1; min-height: 96px; background: var(--color-primary-soft); }
 .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 24px; border-top: 1px solid var(--color-border); }
 .link { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-primary); text-decoration: underline; text-underline-offset: 4px; }
 .signOut { min-height: 44px; padding: 10px 20px; border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-text); font-weight: 600; }
@@ -31,9 +30,7 @@
 @media (max-width: 540px) {
   .navigation { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .navigation a { min-height: 96px; }
-  .close, .adminLink { top: 18px; }
-  .close { right: 18px; }
-  .adminLink { right: 70px; }
+  .close { top: 18px; right: 18px; }
   .actions { align-items: stretch; flex-direction: column; }
   .signOut { width: 100%; }
 }

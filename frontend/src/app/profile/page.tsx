@@ -6,7 +6,6 @@ import { useAuthStore } from '@/store/auth';
 import { logout } from '@/services/auth';
 import { waitForCartSave } from '@/services/cartSync';
 import { useCartStore } from '@/store/cart';
-import AdminIcon from '../admin/AdminIcon';
 import css from './Profile.module.css';
 export default function Profile() {
   const { user, loaded, error, setSession } = useAuthStore();
@@ -62,17 +61,7 @@ export default function Profile() {
           />
         </svg>
       </Link>
-      {user.role === 'ADMIN' && (
-        <Link
-          className={css.adminLink}
-          href="/admin"
-          aria-label="Панель адміністратора"
-          title="Панель адміністратора"
-        >
-          <AdminIcon name="settings" />
-        </Link>
-      )}
-      <header className={user.role === 'ADMIN' ? css.heading + ' ' + css.adminHeading : css.heading}>
+      <header className={css.heading}>
         <p className={css.eyebrow}>Особистий кабінет</p>
         <h1>Вітаємо, {user.name}</h1>
       </header>
