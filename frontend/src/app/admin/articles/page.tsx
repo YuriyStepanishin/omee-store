@@ -10,6 +10,7 @@ import {
   type ArticleInput,
 } from '@/services/admin';
 import css from '../Admin.module.css';
+import EditPanel from '../EditPanel';
 import {uploadPhoto} from '@/services/catalogAdmin';
 import {uploadVideo} from '@/services/contentAdmin';
 const empty: ArticleInput = {
@@ -150,8 +151,14 @@ export default function Articles() {
             ))}
           </ul>
         </section>
-        <section className={css.panel}>
-          <h2>{id ? 'Редагувати публікацію' : 'Нова публікація'}</h2>
+        <EditPanel
+          title={id ? 'Редагувати публікацію' : 'Нова публікація'}
+          editing={Boolean(id)}
+          busy={busy}
+          message={message}
+          failed={failed}
+          onDismiss={() => { reset(); setMessage(''); }}
+        >
           <form className={css.form} onSubmit={submit}>
             <fieldset disabled={busy}>
               {(
@@ -340,7 +347,7 @@ export default function Articles() {
               </div>
             </fieldset>
           </form>
-        </section>
+        </EditPanel>
       </div>
     </>
   );

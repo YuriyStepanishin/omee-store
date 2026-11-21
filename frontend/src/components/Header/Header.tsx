@@ -22,7 +22,7 @@ export default function Header() {
   const { itemsCount, openCart } = useCart();
   const {ids}=useFavorites();
   const accountLabel = user ? user.name.trim() || user.email : 'Увійти';
-  const accountHref = user ? (user.role === 'ADMIN' ? '/admin' : '/profile') : '/login';
+  const accountHref = user ? '/profile' : '/login';
   const closeMenu = () => setOpenForPath(null);
 
   useEffect(() => {

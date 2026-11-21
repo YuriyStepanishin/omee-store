@@ -10,6 +10,7 @@ import {
   type Category,
 } from '@/services/catalogAdmin';
 import css from '../Admin.module.css';
+import EditPanel from '../EditPanel';
 const empty = { name: '', slug: '', image: '', isActive: true };
 export default function CatalogDictionary({kind='categories'}:{kind?:'categories'|'brands'}) {
   const isBrand = kind === 'brands';
@@ -143,8 +144,13 @@ export default function CatalogDictionary({kind='categories'}:{kind?:'categories
             ))}
           </ul>
         </section>
-        <section className={css.panel}>
-          <h2>{isBrand ? (id ? 'Редагування бренду' : 'Новий бренд') : (id ? 'Редагування категорії' : 'Нова категорія')}</h2>
+        <EditPanel
+          title={isBrand ? (id ? 'Редагування бренду' : 'Новий бренд') : (id ? 'Редагування категорії' : 'Нова категорія')}
+          editing={Boolean(id)}
+          busy={busy}
+          message={message}
+          onDismiss={() => { setId(undefined); setForm(empty); setMessage(''); }}
+        >
           <form className={css.form} onSubmit={submit}>
             <fieldset disabled={busy}>
               <label>
@@ -220,7 +226,7 @@ export default function CatalogDictionary({kind='categories'}:{kind?:'categories
               </div>
             </fieldset>
           </form>
-        </section>
+        </EditPanel>
       </div>
     </>
   );
