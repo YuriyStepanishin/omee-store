@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import CartIcon from '@/components/CartIcon/CartIcon';
-import DeliveryFields from '@/components/DeliveryFields/DeliveryFields';
+import DeliveryFields, {
+  initialDeliverySelection,
+} from '@/components/DeliveryFields/DeliveryFields';
 import ProductPhoto from '@/components/ProductPhoto/ProductPhoto';
 import { canAddProduct } from '@/components/ProductCard/ProductCard';
 import { useCart } from '@/hooks/useCart';
@@ -66,6 +68,7 @@ export default function CartModal() {
   const [step, setStep] = useState<Step>('cart');
   const [mode, setMode] = useState<Mode>('delivery');
   const [form, setForm] = useState(defaults);
+  const [deliverySelection, setDeliverySelection] = useState(initialDeliverySelection);
   const [busyState, setBusy] = useState(false);
   const busy=busyState||syncing;
   const [error, setError] = useState('');
@@ -125,6 +128,11 @@ export default function CartModal() {
 
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy || !canOrder) return;
+    if (mode === 'delivery' && (!form.city.trim() || !form.address.trim())) {
+      setError('Вкажіть населений пункт і адресу отримання.');
+      return;
+    }
     setError('');
     setStep('confirm');
   }
@@ -377,6 +385,8 @@ export default function CartModal() {
                 <DeliveryFields
                   form={form}
                   onChange={setForm}
+                  selection={deliverySelection}
+                  onSelectionChange={setDeliverySelection}
                   disabled={busy}
                 />
               ) : (
@@ -404,6 +414,7 @@ export default function CartModal() {
                   />
                 </label>
               ))}
+              {error && <p className={css.warning} role="alert">{error}</p>}
               <div className={css.actions}>
                 <button
                   type="button"
@@ -412,7 +423,9 @@ export default function CartModal() {
                 >
                   ← До кошика
                 </button>
-                <button className={css.primary}>Перевірити замовлення</button>
+                <button type="submit" className={css.primary} disabled={busy || !canOrder}>
+                  Перевірити замовлення
+                </button>
               </div>
             </form>
           )}
@@ -453,7 +466,10 @@ export default function CartModal() {
                   type="button"
                   className={css.secondary}
                   disabled={busy}
-                  onClick={() => setStep('details')}
+                  onClick={() => {
+                    setError('');
+                    setStep('details');
+                  }}
                 >
                   ← Змінити дані
                 </button>

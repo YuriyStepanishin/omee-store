@@ -1,9 +1,73 @@
-.fields{grid-column:1/-1;display:grid;gap:12px;min-width:0;margin:0;padding:16px;border:1px solid var(--color-border);border-radius:14px}
-.fields legend{padding:0 8px;font-weight:700}
-.fields label{display:grid;gap:5px;min-width:0}
-.fields input,.fields select{width:100%;min-width:0;max-width:100%}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.help{font-size:.85rem;line-height:1.45;margin:0;opacity:.8}
-.toggle{justify-self:start;font-size:.85rem;text-decoration:underline;background:transparent;border:0;color:inherit;cursor:pointer;padding:4px 0}
-@media(max-width:1199px) and (min-width:768px){.fields{padding:14px}}
-@media(max-width:767px){.fields{padding:12px}.row{grid-template-columns:1fr}}
+.fields {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.fields legend {
+  padding-inline: 8px;
+  font-weight: 700;
+}
+
+.fields label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.fields input,
+.fields select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 16px;
+  color: var(--color-muted);
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.toggle {
+  min-height: 44px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 540px) {
+  .fields {
+    padding: 12px;
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
