@@ -26,3 +26,20 @@
 @media(max-width:767px){.card{padding:10px;gap:8px;}.photo{padding:8px;}.title{font-size:14px;}.price{font-size:17px;}.cart{font-size:12px;padding:10px 6px;gap:5px;}.cart svg{width:16px;}.brand{letter-spacing:0;}}
 
 @media(min-width:1200px){.bottom{grid-template-columns:minmax(0,1fr) auto;align-items:center;}.cart{padding:10px;font-size:12px;}.openHint{font-size:10px;bottom:6px;right:6px;}}
+
+.packaging {
+  grid-column: 1 / -1;
+  color: var(--color-muted);
+  font-size: .8rem;
+}
+
+.packaging select {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+}

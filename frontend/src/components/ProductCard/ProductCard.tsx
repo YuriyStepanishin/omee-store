@@ -1,9 +1,11 @@
 'use client';
+import { useState } from 'react';
 import type { Product } from '@/types/store';
 import { useCartStore } from '@/store/cart';
 import ProductPhoto from '../ProductPhoto/ProductPhoto';
 import css from './ProductCard.module.css';
 import FavoriteButton from './FavoriteButton';
+import {availableVariants, packagingLabel, withPackaging} from './productPackaging';
 const money = (value: number) =>
   new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(
     value
@@ -82,14 +84,20 @@ export default function ProductCard({
   product: Product;
   busy: boolean;
   added: boolean;
-  onAdd: () => void;
+  onAdd: (sourceProductId?: string) => void;
   onOpen: () => void;
 }) {
+  const [sourceId, setSourceId] = useState('');
+  const variants = availableVariants(p);
+  const variant = variants.find(option => option.sourceProductId === sourceId)
+    ?? variants.find(option => option.price > 0 && option.stock > 0)
+    ?? variants[0];
+  const shown = withPackaging(p, variant);
   return (
     <li
       className={css.card}
       onClick={event => {
-        if (!(event.target as HTMLElement).closest('button,a,input,select'))
+        if (!(event.target as HTMLElement).closest('button,a,input,select,label'))
           onOpen();
       }}
     >
@@ -121,8 +129,24 @@ export default function ProductCard({
       </h3>
       <p className={css.description}>{p.description}</p>
       <div className={css.bottom}>
-        <ProductPrice product={p} />
-        <CartButton product={p} busy={busy} added={added} onAdd={onAdd} />
+        {variants.length > 1 ? (
+          <label className={css.packaging}>
+            Фасування
+            <select aria-label={`Фасування: ${p.title}`} value={variant?.sourceProductId ?? ''}
+              onChange={event => setSourceId(event.target.value)}>
+              {variants.map(option => (
+                <option key={option.id} value={option.sourceProductId}>{packagingLabel(option)}</option>
+              ))}
+            </select>
+          </label>
+        ) : variant?.volume != null && <p className={css.packaging}>{packagingLabel(variant)}</p>}
+        <ProductPrice product={shown} />
+        <CartButton
+          product={p.variants?.length && !variant ? {...shown, stock: 0} : shown}
+          busy={busy}
+          added={added}
+          onAdd={() => onAdd(variant?.sourceProductId)}
+        />
       </div>
     </li>
   );

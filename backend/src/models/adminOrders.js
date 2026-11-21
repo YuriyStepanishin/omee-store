@@ -58,6 +58,10 @@ export function adminOrders(pool) {
             [id]
           );
           await client.query(
+            'UPDATE product_variants v SET stock=v.stock+i.quantity FROM order_items i WHERE i.order_id=$1 AND v.source_product_id=i.product_id',
+            [id]
+          );
+          await client.query(
             'UPDATE products p SET stock=p.stock+i.quantity FROM order_items i WHERE i.order_id=$1 AND p.id=i.product_id',
             [id]
           );
