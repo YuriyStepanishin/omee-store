@@ -11,10 +11,8 @@ import {createUploadSignature,verifyUploadedAsset,verifyUploadedUrls} from '../s
 export function catalogRoutes(config){const router=Router();
  router.use(['/categories','/products','/admin/categories','/admin/brands','/admin/products','/admin/uploads','/upload'],(req,res,next)=>{if(config.mode!=='postgres')return res.status(503).json({message:'Керування каталогом потребує PostgreSQL.'});next();});
 
- router.use((req,res,next)=>{
-   if(req.method==='GET'&&!req.path.startsWith('/admin')){
-     res.set('Cache-Control','public, max-age=60, s-maxage=3600, stale-while-revalidate=604800');
-   }
+ router.use(['/categories','/products'],(req,res,next)=>{
+   res.set('Cache-Control','no-store');
    next();
  });
 

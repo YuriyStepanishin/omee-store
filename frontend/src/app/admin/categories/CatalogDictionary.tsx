@@ -28,7 +28,7 @@ export default function CatalogDictionary({kind='categories'}:{kind?:'categories
     await Promise.all([
       client.invalidateQueries({ queryKey: ['admin', kind] }),
       client.invalidateQueries({ queryKey: ['admin', 'products'] }),
-      client.invalidateQueries({ queryKey: ['admin', 'dashboard-catalog'] }),
+      client.invalidateQueries({ queryKey: ['admin', 'overview'] }),
       client.invalidateQueries({ queryKey: ['catalog'] }),
     ]);
   }

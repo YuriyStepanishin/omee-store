@@ -8,6 +8,7 @@ import {
   articleSchema,
 } from '../validators/admin.js';
 import { adminOrders } from '../models/adminOrders.js';
+import { overviewSql } from '../models/adminOverview.js';
 import { adminArticles } from '../models/adminArticles.js';
 import { mailConfigured } from '../services/mail.js';
 export function adminRoutes(config) {
@@ -29,7 +30,7 @@ export function adminRoutes(config) {
   );
   const orders = () => adminOrders(getPool(config.databaseUrl));
   router.get('/admin/overview', async (req, res) => {
-    const { rows } = await getPool(config.databaseUrl).query("SELECT (SELECT count(*)::int FROM products) AS products, (SELECT count(*)::int FROM orders) AS orders, (SELECT count(*)::int FROM orders WHERE status='NEW') AS new_orders, (SELECT count(*)::int FROM users WHERE role='CUSTOMER') AS customers");
+    const { rows } = await getPool(config.databaseUrl).query(overviewSql);
     res.json(rows[0]);
   });
   router.get('/admin/customers', async (req, res) => {
