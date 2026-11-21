@@ -19,3 +19,5 @@
 .sources ul{padding-left:20px;list-style:disc}.sources li{margin-top:10px}.sources a{color:var(--color-primary);overflow-wrap:anywhere}
 @media(min-width:768px) and (max-width:1199px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.page{margin-block:36px 48px}.card{padding:20px}}
 @media(max-width:767px){.page{width:calc(100% - 32px);margin-block:28px 40px}.grid{grid-template-columns:1fr;gap:14px;margin:24px 0}.card{padding:18px}.intro{font-size:16px}.body p{font-size:16px;line-height:1.8}.body h2{font-size:23px}.sources{padding:18px}}
+
+.card .mediaDate{display:block;margin:0 0 12px;}

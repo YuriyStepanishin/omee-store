@@ -25,7 +25,7 @@ export interface Product {
     isPublished?: boolean;
 }
 export interface MediaItem {
-    source?: {key?:string;provider?:string;page?:string;author?:string;language?:string;description?:string;license?:string;licenseUrl?:string} | null;
+    source?: {key?:string;provider?:string;page?:string;date?:string;author?:string;language?:string;description?:string;license?:string;licenseUrl?:string} | null;
     id: string;
     title: string;
     url: string;

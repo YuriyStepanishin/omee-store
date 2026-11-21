@@ -1,0 +1,30 @@
+.instagram {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.frame {
+  display: block;
+  width: 100%;
+  height: clamp(360px, 115cqw, 520px);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.frame[data-kind='reel'] {
+  height: clamp(430px, 155cqw, 640px);
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  justify-self: start;
+  font-size: .875rem;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
