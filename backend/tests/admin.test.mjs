@@ -157,6 +157,7 @@ function request(app, url, cookie, method = 'GET', body) {
       this.emit('finish');
       resolve({
         status: this.statusCode,
+        cacheControl: this.getHeader('Cache-Control'),
         body: data ? JSON.parse(data.toString()) : null,
       });
       return this;
@@ -215,6 +216,14 @@ test('every new admin operation rejects guests and customers; ADMIN reads DB and
       role = 'CUSTOMER';
     }
     role = 'ADMIN';
+    const privateCatalog = await request(app, '/api/admin/catalog');
+    assert.equal(privateCatalog.status, 401);
+    assert.equal(privateCatalog.cacheControl, 'no-store');
+    const storeInfo = await request(app, '/api/store-info');
+    assert.equal(storeInfo.status, 200);
+    assert.equal(storeInfo.cacheControl, 'no-store');
+    const delivery = await request(app, '/api/delivery/status');
+    assert.match(delivery.cacheControl, /s-maxage=3600/);
     const orders = await request(app, '/api/admin/orders', cookie);
     assert.equal(orders.status, 200);
     assert.equal(orders.body.total, 1);

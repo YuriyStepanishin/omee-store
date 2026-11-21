@@ -3,7 +3,7 @@ import {createDeliveryService} from '../services/delivery.js';
 export function deliveryRoutes(service=createDeliveryService()){
  const router=Router();
  
- router.use((req,res,next)=>{
+ router.use('/delivery',(req,res,next)=>{
    if(req.method==='GET'){
      res.set('Cache-Control','public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
    }

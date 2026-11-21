@@ -3,11 +3,13 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { http } from '@/services/http';
 import { getOrders, statusLabels } from '@/services/admin';
-import { fetchAdminCatalog } from '@/services/storeApi';
 import AdminIcon, { type AdminIconName } from './AdminIcon';
 import css from './Admin.module.css';
 
-type Summary = { products: number; orders: number; new_orders: number; customers: number };
+type Summary = {
+ products: number; orders: number; new_orders: number; customers: number;
+ published_products: number; draft_products: number; hidden_by_category: number; in_stock: number;
+};
 const money = (value: number | string) => Number(value).toLocaleString('uk-UA', { style: 'currency', currency: 'UAH' });
 const metrics: ReadonlyArray<readonly [keyof Summary, string, AdminIconName, string]> = [
  ['products', 'Товари', 'products', '/admin/products'],
@@ -18,13 +20,8 @@ const metrics: ReadonlyArray<readonly [keyof Summary, string, AdminIconName, str
 export default function DashboardOverview() {
  const overview = useQuery({ queryKey: ['admin', 'overview'], queryFn: async () => (await http.get<Summary>('/admin/overview')).data });
  const orders = useQuery({ queryKey: ['admin', 'orders', 1, ''], queryFn: () => getOrders(1, '') });
- const catalog = useQuery({ queryKey: ['admin', 'dashboard-catalog'], queryFn: fetchAdminCatalog });
  const items = orders.data?.items ?? [];
- const products = catalog.data?.products ?? [];
- const inStock = products.filter(product => typeof product.stock === 'number' && product.stock > 0).length;
- const outOfStock = products.filter(product => typeof product.stock === 'number' && product.stock === 0).length;
- const unknownStock = products.length - inStock - outOfStock;
- const draft = products.filter(product => product.isPublished === false).length;
+ const summary = overview.data;
  return <>
   <div className={css.metrics} aria-label="Показники магазину">
    {metrics.map(([key, label, icon, href]) => <Link href={href} className={css.metricCard} key={key}><span className={css.metricIcon}><AdminIcon name={icon}/></span><span className={css.metricLabel}>{label}</span><strong>{overview.data ? overview.data[key].toLocaleString('uk-UA') : '—'}</strong><span className={css.muted}>{overview.isPending ? 'Завантаження…' : overview.isError ? 'Дані недоступні' : 'Переглянути розділ →'}</span></Link>)}
@@ -35,7 +32,18 @@ export default function DashboardOverview() {
     {orders.isPending ? <p role="status">Завантаження…</p> : orders.isError ? <p role="alert">Не вдалося завантажити замовлення. <button className={css.button} onClick={() => void orders.refetch()}>Повторити</button></p> : items.length === 0 ? <p className={css.emptyState}>Нові замовлення з’являться тут.</p> : <div className={css.stockList}>{Object.entries(statusLabels).map(([status, label]) => { const count = items.filter(item => item.status === status).length; return <div className={css.progressRow} key={status}><span>{label}</span><strong>{count}</strong><progress aria-label={label} max={items.length} value={count}/></div>; })}</div>}
    </section>
    <section className={css.panel}><div className={css.panelHeading}><div><h2>Огляд товарів</h2><p className={css.muted}>Наявність у каталозі</p></div><AdminIcon name="products"/></div>
-    {catalog.isPending ? <p role="status">Завантаження…</p> : catalog.isError ? <p role="alert">Не вдалося завантажити каталог. <button className={css.button} onClick={() => void catalog.refetch()}>Повторити</button></p> : <><div className={css.inventoryTotal}><strong>{products.length.toLocaleString('uk-UA')}</strong><span>товарів у каталозі</span></div><div className={css.stockList}>{[['У наявності', inStock], ['Немає в наявності', outOfStock], ['Залишок не вказано', unknownStock], ['Не опубліковано', draft]].map(([label, count]) => <div className={css.inventoryRow} key={label}><span>{label}</span><strong>{count}</strong></div>)}</div></>}
+    {summary && <>
+     <div className={css.inventoryTotal}><strong>{summary.products.toLocaleString('uk-UA')}</strong><span>карток товарів у каталозі</span></div>
+     <div className={css.stockList}>
+      {[
+        ['На вітрині', summary.published_products],
+        ['Чернетки', summary.draft_products],
+        ['Приховано категорією', summary.hidden_by_category],
+        ['У наявності', summary.in_stock],
+        ['Немає в наявності', summary.products - summary.in_stock],
+      ].map(([label, count]) => <div className={css.inventoryRow} key={label}><span>{label}</span><strong>{count}</strong></div>)}
+     </div>
+    </>}
     <Link className={css.panelLink} href="/admin/products">Керувати товарами →</Link>
    </section>
   </div>

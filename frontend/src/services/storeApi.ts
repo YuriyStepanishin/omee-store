@@ -8,5 +8,3 @@ export const checkoutOrder = async (payload: CheckoutPayload) => (await http.pos
     amount: number;
     message: string;
 }>('/orders', payload)).data;
-
-export const fetchAdminCatalog = async () => (await http.get<CatalogResponse>('/admin/catalog')).data;
