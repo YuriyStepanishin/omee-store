@@ -1,27 +1,30 @@
 import { http } from './http';
-export const statusLabels = {
-  NEW: 'Нове',
-  PROCESSING: 'В обробці',
-  PAID: 'Оплачено',
-  SHIPPED: 'Відправлено',
-  DELIVERED: 'Доставлено',
-  CANCELED: 'Скасовано',
-} as const;
-export type OrderStatus = keyof typeof statusLabels;
-export const transitions: Record<OrderStatus, OrderStatus[]> = {
+import type { OrderStatus, PaymentMethod, PaymentStatus } from '@/constants/order';
+export { statusLabels } from '@/constants/order';
+
+const transitions: Record<OrderStatus, OrderStatus[]> = {
   NEW: ['PROCESSING', 'CANCELED'],
-  PROCESSING: ['PAID', 'SHIPPED', 'CANCELED'],
-  PAID: ['SHIPPED'],
+  PROCESSING: ['PACKED', 'SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
+  PAID: ['PACKED', 'SHIPPED', 'READY_FOR_PICKUP'],
+  PACKED: ['SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
   SHIPPED: ['DELIVERED'],
+  READY_FOR_PICKUP: ['DELIVERED', 'CANCELED'],
   DELIVERED: [],
   CANCELED: [],
 };
+export function orderTransitions(status: OrderStatus, deliveryMethod: string) {
+  return transitions[status].filter(next => deliveryMethod === 'pickup' ? next !== 'SHIPPED' : next !== 'READY_FOR_PICKUP');
+}
+
 export interface Order {
   id: string;
   status: OrderStatus;
   total: string;
   deliveryMethod: string;
   paymentMethod: string;
+  paymentStatus: PaymentStatus;
+  trackingNumber: string | null;
+  updatedAt: string;
   comment: string;
   customerName: string;
   customerPhone: string;
@@ -55,6 +58,10 @@ export const updateOrder = (
   data: {
     status: OrderStatus;
     expectedStatus: OrderStatus;
+    expectedUpdatedAt: string;
+    paymentStatus: PaymentStatus;
+    paymentMethod?: PaymentMethod;
+    trackingNumber?: string | null;
     comment: string;
     city: string;
     address: string;

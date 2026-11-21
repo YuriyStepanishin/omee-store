@@ -5,30 +5,15 @@ import {
   getOrders,
   getOrder,
   updateOrder,
-  statusLabels,
-  transitions,
-  type OrderStatus,
+  orderTransitions,
   type OrderDetail,
 } from '@/services/admin';
+import {
+  statusLabels, deliveryLabel, orderStatusLabel, trackingPage,
+  paymentMethodLabel, paymentMethodLabels, paymentStatusLabels,
+  type OrderStatus, type PaymentMethod, type PaymentStatus,
+} from '@/constants/order';
 import css from '../Admin.module.css';
-const deliveryLabel = (method: string) => {
-  const [carrier, kind] = method.split(':');
-  const carriers: Record<string, string> = {
-    nova_poshta: 'Нова пошта',
-    ukrposhta: 'Укрпошта',
-    meest: 'Meest',
-    pickup: 'Самовивіз',
-    to_be_confirmed: 'Уточнюється',
-  };
-  const kinds: Record<string, string> = {
-    branch: 'відділення',
-    locker: 'поштомат',
-    courier: 'кур’єр',
-  };
-  return (
-    (carriers[carrier] || carrier) + (kind ? ' · ' + (kinds[kind] || kind) : '')
-  );
-};
 const money = (n: string | number) =>
   Number(n).toLocaleString('uk-UA', { style: 'currency', currency: 'UAH' });
 export default function Orders() {
@@ -37,6 +22,9 @@ export default function Orders() {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<OrderDetail | null>(null);
   const [status, setStatus] = useState<OrderStatus>('NEW');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('UNCONFIRMED');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
+  const [tracking, setTracking] = useState('');
   const [comment, setComment] = useState('');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
@@ -50,6 +38,9 @@ export default function Orders() {
   function fill(order: OrderDetail) {
     setSelected(order);
     setStatus(order.status);
+    setPaymentStatus(order.paymentStatus ?? 'UNCONFIRMED');
+    setPaymentMethod(Object.hasOwn(paymentMethodLabels, order.paymentMethod) ? order.paymentMethod as PaymentMethod : '');
+    setTracking(order.trackingNumber ?? '');
     setComment(order.comment);
     setCity(order.city);
     setAddress(order.address);
@@ -84,12 +75,18 @@ export default function Orders() {
       await updateOrder(selected.id, {
         status,
         expectedStatus: selected.status,
+        expectedUpdatedAt: selected.updatedAt,
+        paymentStatus,
+        paymentMethod: paymentMethod || undefined,
+        trackingNumber: trackingPage(selected.deliveryMethod) ? tracking.trim() || null : undefined,
         comment,
         city,
         address,
       });
       await Promise.all([
         client.invalidateQueries({ queryKey: ['admin', 'orders'] }),
+        client.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+        client.invalidateQueries({ queryKey: ['my-orders'] }),
         client.invalidateQueries({ queryKey: ['admin', 'products'] }),
         client.invalidateQueries({ queryKey: ['catalog'] }),
       ]);
@@ -102,7 +99,10 @@ export default function Orders() {
       setBusy(false);
     }
   }
-  const terminal = selected && transitions[selected.status].length === 0;
+  const delivered = selected?.status === 'DELIVERED';
+  const canceled = selected?.status === 'CANCELED';
+  const fulfillmentLocked = delivered || canceled;
+  const trackable = selected && trackingPage(selected.deliveryMethod);
   return (
     <>
       {message && (
@@ -163,7 +163,7 @@ export default function Orders() {
                   {new Date(o.createdAt).toLocaleString('uk-UA', {
                     timeZone: 'Europe/Kyiv',
                   })}{' '}
-                  · {statusLabels[o.status]}
+                  · {orderStatusLabel(o.status, o.deliveryMethod)} · {paymentStatusLabels[o.paymentStatus]}
                 </p>
                 <p>
                   {o.customerPhone} · {o.city}
@@ -250,22 +250,35 @@ export default function Orders() {
                 <strong>Разом: {money(selected.total)}</strong>
               </p>
               <form className={css.form} onSubmit={submit}>
-                <fieldset disabled={busy || !!terminal}>
+                <fieldset className={css.orderSection} disabled={busy || fulfillmentLocked}>
+                  <legend>Замовлення та отримання</legend>
                   <label>
                     Статус
                     <select
                       value={status}
                       onChange={e => setStatus(e.target.value as OrderStatus)}
                     >
-                      {[selected.status, ...transitions[selected.status]].map(
+                      {[selected.status, ...orderTransitions(selected.status, selected.deliveryMethod)].map(
                         s => (
                           <option key={s} value={s}>
-                            {statusLabels[s]}
+                            {orderStatusLabel(s, selected.deliveryMethod)}
                           </option>
                         )
                       )}
                     </select>
                   </label>
+                  {trackable && (
+                    <label>
+                      Номер відправлення (ТТН)
+                      <input
+                        maxLength={40}
+                        pattern="[A-Za-z0-9][A-Za-z0-9\-]{5,39}"
+                        required={status === 'SHIPPED' && selected.status !== 'SHIPPED'}
+                        value={tracking}
+                        onChange={e => setTracking(e.target.value)}
+                      />
+                    </label>
+                  )}
                   <label>
                     Місто
                     <input
@@ -285,27 +298,45 @@ export default function Orders() {
                     />
                   </label>
                   <label>
-                    Примітка адміністратора / номер накладної
+                    Примітка адміністратора
                     <textarea
                       maxLength={2000}
                       value={comment}
                       onChange={e => setComment(e.target.value)}
                     />
                   </label>
-                  <p className={css.muted}>
-                    Статус «Оплачено» встановлюйте після перевірки надходження
-                    коштів. Зміна статусу не проводить платіж.
-                  </p>
-                  <button className={css.button + ' ' + css.primary}>
+                </fieldset>
+                <fieldset className={css.orderSection} disabled={busy || canceled}>
+                  <legend>Оплата</legend>
+                  {delivered ? (
+                    <p>Спосіб оплати — {paymentMethodLabel(selected.paymentMethod)}</p>
+                  ) : (
+                    <label>
+                      Спосіб оплати
+                      <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as PaymentMethod | '')}>
+                        {!paymentMethod && <option value="">Уточнюється</option>}
+                        {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label>
+                    Стан оплати
+                    <select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value as PaymentStatus)}>
+                      {Object.entries(paymentStatusLabels).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className={css.muted}>Позначайте оплату після перевірки надходження коштів.</p>
+                </fieldset>
+                {!canceled && (
+                  <button className={css.button + ' ' + css.primary} disabled={busy}>
                     {busy ? 'Збереження…' : 'Зберегти замовлення'}
                   </button>
-                </fieldset>
+                )}
               </form>
-              {terminal && (
-                <p className={css.muted}>
-                  Замовлення завершено. Редагування закрито.
-                </p>
-              )}
               <button
                 className={css.button}
                 disabled={busy}

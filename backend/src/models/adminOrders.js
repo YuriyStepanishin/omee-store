@@ -1,7 +1,10 @@
 import { orderTransitions } from '../validators/admin.js';
 const fail = (message, status = 409) =>
   Object.assign(new Error(message), { status });
-const columns = `id,status,total,delivery_method AS "deliveryMethod",payment_method AS "paymentMethod",comment,customer_name AS "customerName",customer_phone AS "customerPhone",customer_email AS "customerEmail",city,address,created_at AS "createdAt"`;
+const columns = `id,status,total,delivery_method AS "deliveryMethod",payment_method AS "paymentMethod",
+  payment_status AS "paymentStatus",tracking_number AS "trackingNumber",comment,customer_name AS "customerName",
+  customer_phone AS "customerPhone",customer_email AS "customerEmail",city,address,created_at AS "createdAt",updated_at::text AS "updatedAt"`;
+const trackableCarriers = new Set(['nova_poshta', 'ukrposhta', 'meest']);
 export function adminOrders(pool) {
   return {
     async list({ page, status }) {
@@ -26,7 +29,7 @@ export function adminOrders(pool) {
       ).rows[0];
       if (!order) throw fail('Замовлення не знайдено.', 404);
       const { rows } = await pool.query(
-        'SELECT i.product_id AS "productId",p.name,p.sku,i.price,i.quantity FROM order_items i JOIN products p ON p.id=i.product_id WHERE i.order_id=$1 ORDER BY p.name',
+        'SELECT i.product_id AS "productId",COALESCE(i.product_name,p.name) AS name,COALESCE(i.product_sku,p.sku) AS sku,i.price,i.quantity FROM order_items i JOIN products p ON p.id=i.product_id WHERE i.order_id=$1 ORDER BY p.name',
         [id]
       );
       return { ...order, items: rows };
@@ -37,20 +40,42 @@ export function adminOrders(pool) {
         await client.query('BEGIN');
         const order = (
           await client.query(
-            'SELECT status FROM orders WHERE id=$1 FOR UPDATE',
+            `SELECT status,delivery_method,payment_status,payment_method,tracking_number,comment,city,address,updated_at::text AS "updatedAt"
+             FROM orders WHERE id=$1 FOR UPDATE`,
             [id]
           )
         ).rows[0];
         if (!order) throw fail('Замовлення не знайдено.', 404);
-        if (order.status !== data.expectedStatus)
-          throw fail('Статус уже змінився. Оновіть замовлення.');
         if (
-          order.status !== data.status &&
-          !orderTransitions[order.status]?.includes(data.status)
-        )
+          order.status !== data.expectedStatus ||
+          (data.expectedUpdatedAt !== undefined && order.updatedAt !== data.expectedUpdatedAt)
+        ) {
+          throw fail('Замовлення змінилось. Оновіть картку перед збереженням.');
+        }
+        const statusChanged = order.status !== data.status;
+        if (statusChanged && !orderTransitions[order.status]?.includes(data.status)) {
           throw fail('Такий перехід статусу недоступний.');
-        if (['DELIVERED', 'CANCELED'].includes(order.status))
-          throw fail('Завершене замовлення недоступне для редагування.');
+        }
+        const pickup = order.delivery_method === 'pickup';
+        const carrier = order.delivery_method?.split(':')[0];
+        const trackable = trackableCarriers.has(carrier);
+        const tracking = data.trackingNumber === undefined ? order.tracking_number : data.trackingNumber;
+        if (tracking && !trackable) throw fail('Номер відправлення доступний для доставки перевізником.', 400);
+        if (statusChanged && ((data.status === 'READY_FOR_PICKUP' && !pickup) || (data.status === 'SHIPPED' && pickup))) {
+          throw fail('Цей статус не відповідає способу отримання.');
+        }
+        if (statusChanged && data.status === 'SHIPPED' && trackable && !tracking && data.trackingNumber !== undefined) {
+          throw fail('Вкажіть номер відправлення перед передачею перевізнику.', 400);
+        }
+        if (order.status === 'CANCELED' || (order.status === 'DELIVERED' && (
+          data.paymentStatus === undefined || order.city !== data.city ||
+          order.address !== data.address || order.comment !== data.comment ||
+          tracking !== order.tracking_number ||
+          (data.paymentMethod !== undefined && data.paymentMethod !== order.payment_method)
+        ))) {
+          throw fail('Після завершення можна змінити лише стан оплати отриманого замовлення.');
+        }
+        const payment = data.paymentStatus ?? (data.status === 'PAID' && statusChanged ? 'PAID' : null);
         if (data.status === 'CANCELED' && order.status !== 'CANCELED') {
           // Same product lock order as checkout; stock is returned only once.
           await client.query(
@@ -67,8 +92,11 @@ export function adminOrders(pool) {
           );
         }
         await client.query(
-          'UPDATE orders SET status=$2,comment=$3,city=$4,address=$5 WHERE id=$1',
-          [id, data.status, data.comment, data.city, data.address]
+          `UPDATE orders SET status=$2,comment=$3,city=$4,address=$5,
+            payment_status=COALESCE($6,payment_status),payment_method=COALESCE($7,payment_method),
+            tracking_number=CASE WHEN $8 THEN $9 ELSE tracking_number END WHERE id=$1`,
+          [id, data.status, data.comment, data.city, data.address, payment,
+            data.paymentMethod ?? null, data.trackingNumber !== undefined, data.trackingNumber ?? null]
         );
         await client.query('COMMIT');
       } catch (error) {

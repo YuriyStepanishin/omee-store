@@ -3,15 +3,19 @@ export const orderStatuses = [
   'NEW',
   'PROCESSING',
   'PAID',
+  'PACKED',
   'SHIPPED',
+  'READY_FOR_PICKUP',
   'DELIVERED',
   'CANCELED',
 ];
 export const orderTransitions = {
   NEW: ['PROCESSING', 'CANCELED'],
-  PROCESSING: ['PAID', 'SHIPPED', 'CANCELED'],
-  PAID: ['SHIPPED'],
+  PROCESSING: ['PAID', 'PACKED', 'SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
+  PAID: ['PROCESSING', 'PACKED', 'SHIPPED', 'READY_FOR_PICKUP'],
+  PACKED: ['SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
   SHIPPED: ['DELIVERED'],
+  READY_FOR_PICKUP: ['DELIVERED', 'CANCELED'],
   DELIVERED: [],
   CANCELED: [],
 };
@@ -23,6 +27,10 @@ export const orderUpdateSchema = z
   .object({
     status: z.enum(orderStatuses),
     expectedStatus: z.enum(orderStatuses),
+    expectedUpdatedAt: z.string().min(1).max(80).optional(),
+    paymentStatus: z.enum(['UNCONFIRMED', 'PAID']).optional(),
+    paymentMethod: z.enum(['on_confirmation', 'on_receipt', 'bank_transfer']).optional(),
+    trackingNumber: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9-]{5,39}$/, 'Перевірте номер відправлення.').nullable().optional(),
     comment: z.string().trim().max(2000),
     city: z.string().trim().min(1).max(120),
     address: z.string().trim().min(1).max(300),

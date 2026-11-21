@@ -16,14 +16,14 @@ const update = {
   city: 'Хмельницький',
   address: 'Відділення №1',
 };
-function stockDatabase(status = 'NEW', fail = false) {
+function stockDatabase(status = 'NEW', fail = false, fields = {}) {
   const calls = [];
   let returned = 0;
   let released = false;
   const client = {
     async query(sql, args) {
       calls.push({ sql, args });
-      if (sql.startsWith('SELECT status')) return { rows: [{ status }] };
+      if (sql.startsWith('SELECT status')) return { rows: [{ status, ...fields }] };
       if (sql.startsWith('UPDATE products')) {
         returned++;
         if (fail) throw Error('stock failure');
@@ -75,6 +75,43 @@ test('invalid transitions, terminal orders and stock errors roll back', async ()
   assert.equal(db.calls.at(-1).sql, 'ROLLBACK');
   assert.ok(db.released());
 });
+test('shipping and payment can be recorded independently, including after receipt', async () => {
+  const fields = {
+    delivery_method: 'nova_poshta:branch',
+    tracking_number: '20450000000000',
+    city: update.city,
+    address: update.address,
+    comment: update.comment,
+    updatedAt: 'version',
+  };
+  const packed = stockDatabase('PACKED', false, fields);
+  await adminOrders(packed.pool).update(id, {
+    ...update, expectedStatus: 'PACKED', status: 'SHIPPED',
+    expectedUpdatedAt: 'version', paymentStatus: 'UNCONFIRMED',
+    trackingNumber: fields.tracking_number,
+  });
+  const dispatch = packed.calls.find(call => call.sql.startsWith('UPDATE orders'));
+  assert.equal(dispatch.args[1], 'SHIPPED');
+  assert.equal(dispatch.args[5], 'UNCONFIRMED');
+  assert.equal(dispatch.args[8], fields.tracking_number);
+
+  const delivered = stockDatabase('DELIVERED', false, fields);
+  const payment = { ...update, expectedStatus: 'DELIVERED', status: 'DELIVERED', paymentStatus: 'PAID' };
+  await adminOrders(delivered.pool).update(id, payment);
+  assert.equal(delivered.calls.find(call => call.sql.startsWith('UPDATE orders')).args[5], 'PAID');
+  await assert.rejects(() => adminOrders(delivered.pool).update(id, { ...payment, address: 'Інша адреса' }), { status: 409 });
+  await assert.rejects(() => adminOrders(delivered.pool).update(id, { ...payment, expectedUpdatedAt: 'stale' }), { status: 409 });
+});
+
+test('pickup has its own ready status and does not accept tracking numbers', async () => {
+  const db = stockDatabase('PACKED', false, { delivery_method: 'pickup' });
+  const packed = { ...update, expectedStatus: 'PACKED', status: 'READY_FOR_PICKUP' };
+  await assert.rejects(() => adminOrders(db.pool).update(id, { ...packed, trackingNumber: '20450000000000' }), { status: 400 });
+  await assert.rejects(() => adminOrders(db.pool).update(id, { ...packed, status: 'SHIPPED' }), { status: 409 });
+  await adminOrders(db.pool).update(id, packed);
+  assert.equal(db.calls.at(-1).sql, 'COMMIT');
+});
+
 test('updates validate status, lengths and article source URLs', () => {
   assert.ok(orderUpdateSchema.safeParse(update).success);
   assert.ok(

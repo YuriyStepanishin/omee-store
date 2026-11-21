@@ -9,8 +9,8 @@ import ProductModal from '@/components/ProductModal/ProductModal';
 import type {Product} from '@/types/store';
 import {useCart} from '@/hooks/useCart';
 import css from './Account.module.css';
+import {deliveryLabel,orderStatusLabel,paymentMethodLabel,paymentStatusLabels,trackingPage} from '@/constants/order';
 const money=(amount:string|number)=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH'}).format(Number(amount));
-const statuses:Record<string,string>={NEW:'Нове',PROCESSING:'Опрацьовується',PAID:'Оплачено',SHIPPED:'Відправлено',DELIVERED:'Доставлено',CANCELED:'Скасовано'};
 function Account({title,children}:{title:string;children:ReactNode}) {
   const {user,loaded,error}=useAuthStore();
   return <main className={css.page}><nav className={css.nav} aria-label="Особистий кабінет"><Link href="/profile">Профіль</Link><Link href="/profile/orders">Мої замовлення</Link><Link href="/profile/wishlist">Список бажань</Link><Link href="/#catalog">До каталогу</Link></nav><h1>{title}</h1>
@@ -27,7 +27,29 @@ export function MyOrders() {
   return <Account title="Мої замовлення">
     {query.isPending&&<p role="status">Завантажуємо замовлення…</p>}
     {query.isError&&<p role="alert" className={css.error}>{query.error.message}</p>}
-    {query.data&&<>{query.data.items.length===0&&<p>Тут поки немає замовлень. Замовлення, оформлені після входу, зберігатимуться в цьому розділі.</p>}{query.data.items.map(order=><details className={css.order} key={order.id}><summary>№ {order.id.slice(0,8)} · {new Date(order.createdAt).toLocaleDateString('uk-UA')} · {statuses[order.status]||order.status} · {money(order.total)}</summary><ul>{order.items.map((item,index)=><li key={`${item.sku}-${index}`}><span>{item.name}<small>Артикул: {item.sku}</small></span><span>{item.quantity} × {money(item.price)}</span></li>)}</ul><p>Доставка: {order.city}, {order.address}</p><p>Номер замовлення: {order.id}</p></details>)}<Pagination page={page} setPage={setPage} next={query.data.items.length===20} busy={query.isFetching}/></>}
+    {query.data && <>
+      {query.data.items.length === 0 && <p>Тут поки немає замовлень. Замовлення, оформлені після входу, зберігатимуться в цьому розділі.</p>}
+      {query.data.items.map(order => {
+        const tracker = trackingPage(order.deliveryMethod);
+        return <details className={css.order} key={order.id}>
+          <summary>№ {order.id.slice(0,8)} · {new Date(order.createdAt).toLocaleDateString('uk-UA')} · {orderStatusLabel(order.status, order.deliveryMethod)} · {money(order.total)}</summary>
+          <ul>{order.items.map((item,index) => <li key={`${item.sku}-${index}`}>
+            <span>{item.name}<small>Артикул: {item.sku}</small></span>
+            <span>{item.quantity} × {money(item.price)}</span>
+          </li>)}</ul>
+          <dl className={css.orderDetails}>
+            <dt>Отримання</dt><dd>{deliveryLabel(order.deliveryMethod)} · {order.city}, {order.address}</dd>
+            <dt>Оплата</dt><dd>{paymentMethodLabel(order.paymentMethod)} · {paymentStatusLabels[order.paymentStatus]}</dd>
+            {tracker && order.trackingNumber && <>
+              <dt>Номер відправлення</dt>
+              <dd><strong>{order.trackingNumber}</strong> <a href={tracker} target="_blank" rel="noopener noreferrer">Відстежити у перевізника ↗</a></dd>
+            </>}
+            <dt>Номер замовлення</dt><dd>{order.id}</dd>
+          </dl>
+        </details>;
+      })}
+      <Pagination page={page} setPage={setPage} next={query.data.items.length === 20} busy={query.isFetching}/>
+    </>}
   </Account>;
 }
 export function Wishlist() {

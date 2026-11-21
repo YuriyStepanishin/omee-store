@@ -2,6 +2,7 @@ export function accountRepository(pool) {
   return {
     async orders(userId,page) {
       const {rows} = await pool.query(`SELECT o.id,o.status,o.total,o.created_at AS "createdAt",o.delivery_method AS "deliveryMethod",o.city,o.address,
+        o.payment_method AS "paymentMethod",o.payment_status AS "paymentStatus",o.tracking_number AS "trackingNumber",
         COALESCE((SELECT json_agg(json_build_object('name',COALESCE(i.product_name,p.name),'sku',COALESCE(i.product_sku,p.sku),'quantity',i.quantity,'price',i.price) ORDER BY i.id) FROM order_items i JOIN products p ON p.id=i.product_id WHERE i.order_id=o.id),'[]'::json) AS items
         FROM orders o WHERE o.user_id=$1 ORDER BY o.created_at DESC,o.id DESC LIMIT 20 OFFSET $2`,[userId,(page-1)*20]);
       return {items:rows,page,limit:20};
