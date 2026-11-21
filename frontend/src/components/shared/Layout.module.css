@@ -46,6 +46,15 @@
   border-bottom-color: currentColor;
 }
 
+.nav .adminLink {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.adminLink span {
+  display: none;
+}
+
 .nav .mobileOnly,
 .mobileAccount,
 .menu {
@@ -221,6 +230,15 @@
   .nav a {
     padding-inline: 12px;
     border-radius: 8px;
+  }
+
+  .nav .adminLink {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .adminLink span {
+    display: inline;
   }
 
   .nav .mobileOnly {

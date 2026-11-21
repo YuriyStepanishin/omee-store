@@ -5,6 +5,7 @@ import { getContent, saveContent, type Banner } from '@/services/contentAdmin';
 import { uploadPhoto } from '@/services/catalogAdmin';
 import { http } from '@/services/http';
 import css from '../Admin.module.css';
+import EditPanel from '../EditPanel';
 const empty: Banner = {
   title: '',
   imageUrl: '',
@@ -154,8 +155,14 @@ export default function HeroAdmin() {
             ))}
           </ul>
         </section>
-        <section className={css.panel}>
-          <h2>{form.id ? 'Редагувати банер' : 'Додати банер'}</h2>
+        <EditPanel
+          title={form.id ? 'Редагувати банер' : 'Додати банер'}
+          editing={Boolean(form.id)}
+          busy={busy}
+          message={message}
+          failed={failed}
+          onDismiss={() => { setForm(empty); setMessage(''); }}
+        >
           <form className={css.form} onSubmit={submit}>
             <fieldset disabled={busy}>
               <label>
@@ -233,7 +240,7 @@ export default function HeroAdmin() {
               </div>
             </fieldset>
           </form>
-        </section>
+        </EditPanel>
       </div>
     </>
   );

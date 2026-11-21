@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/hooks/useCart';
 import CartIcon from '@/components/CartIcon/CartIcon';
+import AdminIcon from '@/app/admin/AdminIcon';
 import Container from '../Container/Container';
 import BrandLogo from '../BrandLogo/BrandLogo';
 import ThemeToggle from '../ThemeToggle/ThemeToggle';
@@ -22,7 +23,7 @@ export default function Header() {
   const { itemsCount, openCart } = useCart();
   const {ids}=useFavorites();
   const accountLabel = user ? user.name.trim() || user.email : 'Увійти';
-  const accountHref = user ? (user.role === 'ADMIN' ? '/admin' : '/profile') : '/login';
+  const accountHref = user ? '/profile' : '/login';
   const closeMenu = () => setOpenForPath(null);
 
   useEffect(() => {
@@ -85,6 +86,18 @@ export default function Header() {
             <Link className={css.mobileOnly} href="/#catalog" onClick={closeMenu}>Каталог</Link>
             <Link href="/#media" onClick={closeMenu}>Журнал про корисне</Link>
             <Link href="/#about" onClick={closeMenu}>Про магазин</Link>
+            {user?.role === 'ADMIN' && (
+              <Link
+                className={css.adminLink}
+                href="/admin"
+                aria-label="Панель адміністратора"
+                title="Панель адміністратора"
+                onClick={closeMenu}
+              >
+                <AdminIcon name="settings" />
+                <span>Панель адміністратора</span>
+              </Link>
+            )}
             <div className={css.mobileAccount}>
               <Link href={accountHref} onClick={closeMenu}>{user ? 'Профіль' : 'Увійти'}</Link>
               <Link href="/profile/orders" onClick={closeMenu}>Мої замовлення</Link>

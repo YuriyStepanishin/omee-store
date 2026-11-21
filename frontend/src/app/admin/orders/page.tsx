@@ -14,6 +14,7 @@ import {
   type OrderStatus, type PaymentMethod, type PaymentStatus,
 } from '@/constants/order';
 import css from '../Admin.module.css';
+import EditPanel from '../EditPanel';
 const money = (n: string | number) =>
   Number(n).toLocaleString('uk-UA', { style: 'currency', currency: 'UAH' });
 export default function Orders() {
@@ -200,12 +201,14 @@ export default function Orders() {
             </div>
           )}
         </section>
-        <section className={css.panel}>
-          <h2>
-            {selected
-              ? 'Замовлення №' + selected.id.slice(0, 8)
-              : 'Картка замовлення'}
-          </h2>
+        <EditPanel
+          title={selected ? 'Замовлення №' + selected.id.slice(0, 8) : 'Картка замовлення'}
+          editing={Boolean(selected)}
+          busy={busy}
+          message={message}
+          failed={failed}
+          onDismiss={() => { setSelected(null); setMessage(''); }}
+        >
           {!selected ? (
             <p className={css.muted}>Виберіть замовлення зі списку.</p>
           ) : (
@@ -346,7 +349,7 @@ export default function Orders() {
               </button>
             </>
           )}
-        </section>
+        </EditPanel>
       </div>
     </>
   );

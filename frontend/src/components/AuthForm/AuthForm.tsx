@@ -46,7 +46,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
     try {
       const user = await (isRegister ? registerAccount({...values,confirmPassword}) : login(values));
       setSession(user);
-      router.replace(user.role === 'ADMIN' ? '/admin' : '/profile');
+      router.replace('/profile');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Не вдалося увійти.');
     }
