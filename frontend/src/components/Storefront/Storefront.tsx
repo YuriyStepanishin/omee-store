@@ -287,7 +287,7 @@ export default function App() {
           <div className={cx('container')}>
             <h2 className={cx('section__title')}>Наш журнал про корисне</h2>
             <p>
-              Відео, фото та статті з ідеями й порадами з догляду за волоссям.
+              Відео, фото та поради з догляду за волоссям.
             </p>
             <Link href="/blog">Увесь Журнал</Link>
             <ul className={cx('useful-grid')}>
@@ -302,10 +302,10 @@ export default function App() {
                       item={entry.item}
                       className={cx('media-frame')}
                     />
-                    <MediaCredit
+                    {entry.item.source?.provider !== 'Instagram' && <MediaCredit
                       item={entry.item}
                       className={cx('media-credit')}
-                    />
+                    />}
                   </li>
                 ) : (
                   <li
