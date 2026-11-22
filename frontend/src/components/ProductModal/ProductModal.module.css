@@ -4,6 +4,7 @@
 .closeIcon{display:block;width:24px;height:24px;}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:start;}
 .gallery{min-width:0;}
+.photoFrame{position:relative;}
 .mainPhoto{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1/1;max-height:360px;object-fit:contain;background:#fff;border-radius:16px;padding:20px;color:#70665e;}
 .thumbnails{display:flex;gap:10px;overflow:auto;padding:8px 4px 12px;margin-top:12px;}
 .thumbnails button{padding:3px;flex:0 0 68px;border:2px solid var(--color-border);border-radius:10px;background:#fff;}
