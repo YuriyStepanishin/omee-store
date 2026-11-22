@@ -1,0 +1,4 @@
+.list{position:absolute;z-index:1;inset:10px auto auto 10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:calc(100% - 20px);pointer-events:none;}
+.badge,.more{display:inline-block;max-width:100%;padding:5px 9px;border-radius:7px;font-size:11px;line-height:1.25;font-weight:700;text-align:left;overflow-wrap:anywhere;box-shadow:0 2px 7px rgb(0 0 0 / 8%);}
+.more{background:#fff;color:#333;}
+@media(max-width:767px){.list{inset:7px auto auto 7px;gap:4px;}.badge,.more{padding:4px 7px;font-size:10px;}}
