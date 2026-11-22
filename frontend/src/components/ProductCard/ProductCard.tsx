@@ -5,6 +5,7 @@ import { useCartStore } from '@/store/cart';
 import ProductPhoto from '../ProductPhoto/ProductPhoto';
 import css from './ProductCard.module.css';
 import FavoriteButton from './FavoriteButton';
+import ProductBadges from '../ProductBadges/ProductBadges';
 import {availableVariants, packagingLabel, withPackaging} from './productPackaging';
 const money = (value: number) =>
   new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(
@@ -113,7 +114,7 @@ export default function ProductCard({
           images={p.images}
           alt={p.title}
         />
-        
+        <ProductBadges badges={p.badges} limit={3}/>
       </button>
       <div className={css.meta}>
         <p className={css.brand}>
