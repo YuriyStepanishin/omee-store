@@ -23,6 +23,11 @@ const variantSchema = z.object({
   { message: 'Вкажіть об’єм або вагу та одиницю виміру.', path: ['volume'] }
 );
 
+export const productBadgeSchema=z.object({
+  label:z.string().trim().min(1).max(28),
+  background:z.string().regex(/^#[0-9a-fA-F]{6}$/,'Оберіть колір фону.'),
+  color:z.string().regex(/^#[0-9a-fA-F]{6}$/,'Оберіть колір тексту.'),
+}).strict();
 export const productSchema = z.object({
   categoryId: z.string().uuid(),
   brandId: z.string().uuid().nullable().optional(),
@@ -33,6 +38,7 @@ export const productSchema = z.object({
   isActive: z.boolean().default(false),
   images: z.array(image).max(8).default([]),
   characteristics: z.record(z.string().max(80), z.string().max(500)).default({}),
+  badges: z.array(productBadgeSchema).max(4).default([]),
   variants: z.array(variantSchema).min(1).max(40).optional(),
 }).strict().refine(validOldPrice, oldPriceError).superRefine((value, ctx) => {
   if (!value.variants) return;
