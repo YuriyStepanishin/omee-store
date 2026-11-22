@@ -1,4 +1,4 @@
-import type { ProductVariant } from '@/types/store';
+import type { ProductBadge, ProductVariant } from '@/types/store';
 import { http } from './http';
 import { uploadToCloudinary } from './cloudinaryUpload';
 export interface Category {
@@ -21,6 +21,7 @@ export interface ProductInput {
   isActive: boolean;
   images: string[];
   characteristics: Record<string, string>;
+  badges: ProductBadge[];
   variants?: Array<Omit<ProductVariant, 'id' | 'sourceProductId'> & {id?: string}>;
 }
 export interface AdminProduct extends ProductInput {
