@@ -2,7 +2,7 @@ import {canonicalProduct, variantJson} from './productVariants.js';
 import {catalogDetails} from './catalogDetails.js';
 export async function loadCatalog(pool,{includeDrafts=false}={}) {
  const result=await pool.query(
-  `SELECT p.id,p.name AS title,p.sku,c.name AS category,p.price,p.old_price AS "oldPrice",p.stock,p.description,b.name AS "brandName",
+  `SELECT p.id,p.name AS title,p.sku,c.name AS category,p.price,p.old_price AS "oldPrice",p.stock,p.description,p.badges,b.name AS "brandName",
   ${variantJson()} AS variants,
   (COALESCE(p.characteristics,'{}'::jsonb)-'sourceData') || jsonb_build_object('sourceData',
     (SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb)
