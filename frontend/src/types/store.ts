@@ -1,5 +1,6 @@
 import type {DeliveryCarrier,DeliveryType} from '@/constants/delivery';
 export type ProductCategory = string;
+export interface ProductBadge { label: string; background: string; color: string; }
 export interface ProductVariant { id:string; sourceProductId:string; volume:number|null; unit:string|null; price:number; oldPrice:number|null; stock:number; sku:string; isActive:boolean; }
 export interface Product {
     variants?: ProductVariant[];
@@ -19,6 +20,7 @@ export interface Product {
     stock?: number;
     isNew?: boolean;
     isHit?: boolean;
+    badges?: ProductBadge[];
     description: string;
     image: string;
     images?: string[];
