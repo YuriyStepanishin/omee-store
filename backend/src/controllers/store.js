@@ -24,7 +24,8 @@ export function storeController(config,dataDir) {
    timed('blog',()=>articleRepository(pool).list()),
   ]);
   console.info(`[catalog-perf] total ${Date.now()-started}ms preview=${preview} products=${products.length}`);
-  const response={...content,categories,products,blog,demo:false,...(preview?{preview:true}:{})};
+  const listingProducts=preview?products:products.map(({images,characteristics,details,...product})=>({...product,images:[product.image],characteristics:{},details:[]}));
+  const response={...content,categories,products:listingProducts,blog,demo:false,...(preview?{preview:true}:{})};
   console.info(`[catalog-perf] payload ${Buffer.byteLength(JSON.stringify(response))} bytes`);
   console.info('[catalog-perf] payload-breakdown '+JSON.stringify(Object.fromEntries(['products','categories','banners','media','blog','info'].map(key=>[key,Buffer.byteLength(JSON.stringify(response[key]??null))]))));
   console.info('[catalog-perf] product-fields '+JSON.stringify(Object.fromEntries(['characteristics','details','description','images','variants','groups','badges'].map(key=>[key,products.reduce((sum,p)=>sum+Buffer.byteLength(JSON.stringify(p[key]??null)),0)]))));
@@ -34,6 +35,12 @@ export function storeController(config,dataDir) {
  info:async(req,res)=>res.json({info:config.mode==='demo'?catalog.info:await contentRepository(getPool(config.databaseUrl)).publicInfo()}),
  catalog:async(req,res)=>res.json(config.mode==='demo'?{...catalog,demo:true}:await readCatalog()),
  adminCatalog:async(req,res)=>res.json(await readCatalog(true)),
+ product:async(req,res)=>{
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id))return res.status(400).json({message:'Некоректний ідентифікатор товару.'});
+  const products=config.mode==='demo'?catalog.products.filter(p=>p.id===req.params.id):await loadCatalog(getPool(config.databaseUrl),{productId:req.params.id});
+  if(!products.length)return res.status(404).json({message:'Товар не знайдено.'});
+  res.json(products[0]);
+ },
  order:async(req,res)=>{
   let order;
   if(config.mode==='demo'){try{order=validateOrder(req.body);}catch(error){error.status=400;throw error;}await saveDemoOrder(order,dataDir);}
