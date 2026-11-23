@@ -49,3 +49,9 @@ export async function loadCatalogPage(pool,{page=1,limit=24,search='',brand='',c
  WHERE ${where} ORDER BY ${order} LIMIT $5 OFFSET $6`,[q,selectedBrand,selectedCategory,selectedLine,safeLimit,(safePage-1)*safeLimit]);
  return {products:result.rows.map(row=>{const product={...row,...catalogDetails(row),image:row.images[0]||'',price:Number(row.price),oldPrice:row.oldPrice===null?null:Number(row.oldPrice)};return {...product,images:[product.image],characteristics:{},details:[]};}),page:safePage,limit:safeLimit,total,pages:Math.ceil(total/safeLimit)};
 }
+
+// Filter options are computed across all published canonical products, not the current page.
+export async function loadCatalogFacets(pool){
+ const {rows}=await pool.query(`SELECT DISTINCT c.name AS category,b.name AS brand FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE p.is_active AND c.is_active AND ${canonicalProduct}`);
+ return {categories:[...new Set(rows.map(r=>r.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'uk')),brands:[...new Set(rows.map(r=>r.brand).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'uk'))};
+}
