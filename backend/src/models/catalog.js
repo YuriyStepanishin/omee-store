@@ -32,7 +32,9 @@ export async function loadCatalogPage(pool,{page=1,limit=24,search='',brand='',c
  AND ($2::text='' OR b.name=$2)
  AND ($3::text='' OR c.name=$3 OR p.characteristics->>'group'=$3 OR p.characteristics->'sourceData'->>'category'=$3)
  AND ($4::text='' OR CASE
- WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('hair','body','other') THEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience'))
+ WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('hair','догляд за волоссям') THEN 'hair'
+ WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('body','догляд за тілом') THEN 'body'
+ WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('other','інше') THEN 'other'
  WHEN concat_ws(' ',c.name,p.characteristics->>'group',p.characteristics->'sourceData'->>'category') ~* 'волосс|шампун|кондиціонер|стайлінг|hair|scalp' THEN 'hair'
  WHEN concat_ws(' ',c.name,p.characteristics->>'group',p.characteristics->'sourceData'->>'category') ~* 'тіл|шкір|облич|рук|ніг|душ|body|skin|face|крем|лосьйон|скраб' THEN 'body'
  ELSE 'other' END=$4)`;
