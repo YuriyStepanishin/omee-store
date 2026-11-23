@@ -13,7 +13,7 @@ import { PRODUCT_LINES, type ProductLine } from '@/constants/productLines';
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCatalog, fetchCatalogPage, fetchProduct } from '@/services/storeApi';
+import { fetchCatalog, fetchCatalogPage, fetchCatalogFacets, fetchProduct } from '@/services/storeApi';
 import { useCart } from '@/hooks/useCart';
 import css from './Storefront.module.css';
 const cx = (value: string) =>
@@ -72,6 +72,7 @@ export default function App() {
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const facets=useQuery({queryKey:['catalog','facets'],queryFn:fetchCatalogFacets,staleTime:5*60_000});
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
   const [line, setLine] = useState<ProductLine>('hair');
@@ -216,14 +217,7 @@ export default function App() {
                 Бренд
                 <select value={brand} onChange={e => setBrand(e.target.value)}>
                   <option value="all">Усі бренди</option>
-                  {[
-                    ...new Set(
-                      lineProducts
-                        .map(p => p.brand)
-                        .filter((b): b is string => Boolean(b))
-                    ),
-                  ]
-                    .sort((a, b) => a.localeCompare(b, 'uk'))
+                  {(facets.data?.brands ?? [])
                     .map(b => (
                       <option value={b} key={b}>
                         {b}
@@ -238,15 +232,7 @@ export default function App() {
                   onChange={e => setCategory(e.target.value)}
                 >
                   <option value="all">Усі категорії</option>
-                  {[
-                    ...new Set(
-                      [
-                        ...(catalog.categories || []).map(c => c.name),
-                        ...lineProducts.flatMap(p => p.groups || [p.category]),
-                      ].filter(Boolean)
-                    ),
-                  ]
-                    .sort((a, b) => a.localeCompare(b, 'uk'))
+                  {(facets.data?.categories ?? [])
                     .map(c => (
                       <option key={c} value={c}>
                         {c}
