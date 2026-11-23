@@ -68,4 +68,4 @@ export const listSchema=z.object({page:z.coerce.number().int().min(1).max(100000
 export function validate(schema,value){const result=schema.safeParse(value);if(!result.success)throw Object.assign(new Error(result.error.issues[0]?.message||'Перевірте введені дані.'),{status:400});return result.data;}
 export function validateId(id){return validate(z.string().uuid(),id);}
 
-export const audienceSchema=z.object({audience:z.enum(['women','men','kids'])}).strict();
+export const audienceSchema=z.object({audience:z.enum(['hair','body','other'])}).strict();
