@@ -127,7 +127,7 @@ export default function App() {
     (currentUsefulPage + 1) * usefulPageSize
   );
 
-  const lineProducts = products.filter(p => (p.audience || 'other') === line);
+  const lineProducts = products;
   const visible = pageQuery.data?.products ?? [];
   function addProduct(product: Product, sourceProductId?: string) {
     const variants = availableVariants(product);
@@ -286,9 +286,7 @@ export default function App() {
             </nav>}
             {!visible.length && (
               <p role="status">
-                {!products.length
-                  ? 'Каталог наповнюється. Товари з’являться після публікації.'
-                  : 'Товарів за цим запитом немає.'}
+                {pageQuery.isPending ? 'Завантаження товарів…' : (pageQuery.data?.total === 0 && category === 'all' && brand === 'all' && !debouncedSearch ? 'Каталог наповнюється. Товари з’являться після публікації.' : 'Товарів за цим запитом немає.')}
               </p>
             )}
           </div>
