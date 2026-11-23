@@ -244,7 +244,7 @@ export default function CartModal() {
               </button>
             </div>
           )}
-          {!ready && !catalogError && items.length > 0 && (
+          {!ready && !catalogError && !cartProducts.error && items.length > 0 && (
             <p role="status">Завантаження кошика…</p>
           )}
 
