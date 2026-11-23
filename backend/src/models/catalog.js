@@ -1,6 +1,6 @@
 import {canonicalProduct, variantJson} from './productVariants.js';
 import {catalogDetails} from './catalogDetails.js';
-export async function loadCatalog(pool,{includeDrafts=false}={}) {
+export async function loadCatalog(pool,{includeDrafts=false,productId=null}={}) {
  const result=await pool.query(
   `SELECT p.id,p.name AS title,p.sku,c.name AS category,p.price,p.old_price AS "oldPrice",p.stock,p.description,p.badges,b.name AS "brandName",
   ${variantJson()} AS variants,
@@ -12,7 +12,7 @@ export async function loadCatalog(pool,{includeDrafts=false}={}) {
   (p.is_active AND c.is_active) AS "isPublished",
   COALESCE((SELECT json_agg(image_url ORDER BY (image_url LIKE 'https://res.cloudinary.com/%') DESC,sort_order,id)
    FROM product_images WHERE product_id=p.id),'[]'::json) AS images
-  FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE ${includeDrafts?'TRUE':'p.is_active AND c.is_active'} AND ${canonicalProduct} ORDER BY p.created_at DESC,p.id`);
+  FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE ${includeDrafts?'TRUE':'p.is_active AND c.is_active'} AND ${canonicalProduct} AND ($1::uuid IS NULL OR p.id=$1::uuid) ORDER BY p.created_at DESC,p.id`,[productId]);
  return result.rows.map(row=>({...row,...catalogDetails(row),image:row.images[0]||'',price:Number(row.price),oldPrice:row.oldPrice===null?null:Number(row.oldPrice)}));
 }
 
