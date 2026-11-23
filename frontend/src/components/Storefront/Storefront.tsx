@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchCatalog, fetchCatalogPage, fetchCatalogFacets, fetchProduct } from '@/services/storeApi';
 import { useCart } from '@/hooks/useCart';
+import { useDesktop } from '@/hooks/useDesktop';
 import css from './Storefront.module.css';
 const cx = (value: string) =>
   value
@@ -77,11 +78,13 @@ export default function App() {
   const [brand, setBrand] = useState('all');
   const [line, setLine] = useState<ProductLine>('hair');
   const [search, setSearch] = useState('');
+  const desktop=useDesktop();
   const [catalogPage, setCatalogPage] = useState(1);
+  const [shownProducts,setShownProducts]=useState<Product[]>([]);
   const [catalogSort, setCatalogSort] = useState('newest');
   const [debouncedSearch,setDebouncedSearch]=useState('');
   useEffect(()=>{const id=setTimeout(()=>setDebouncedSearch(search),300);return ()=>clearTimeout(id);},[search]);
-  useEffect(()=>setCatalogPage(1),[category,brand,line,debouncedSearch,catalogSort]);
+  useEffect(()=>{setCatalogPage(1);setShownProducts([]);},[category,brand,line,debouncedSearch,catalogSort]);
   const pageQuery=useQuery({queryKey:['catalog','page',catalogPage,category,brand,line,debouncedSearch,catalogSort],queryFn:()=>fetchCatalogPage({page:catalogPage,limit:24,category:category==='all'?'':category,brand:brand==='all'?'':brand,line,search:debouncedSearch,sort:catalogSort}),staleTime:60_000,retry:1});
   const [busy, setBusy] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -129,7 +132,8 @@ export default function App() {
   );
 
   const lineProducts = products;
-  const visible = pageQuery.data?.products ?? [];
+  const visible = desktop ? (pageQuery.data?.products ?? []) : shownProducts;
+  useEffect(()=>{if(desktop){setShownProducts([]);return;}if(!pageQuery.data)return;setShownProducts(previous=>catalogPage===1?pageQuery.data.products:[...previous,...pageQuery.data.products.filter(p=>!previous.some(existing=>existing.id===p.id))]);},[desktop,catalogPage,pageQuery.data]);
   function addProduct(product: Product, sourceProductId?: string) {
     const variants = availableVariants(product);
     const variant = sourceProductId ? variants.find(v => v.sourceProductId === sourceProductId) : variants[0];
@@ -263,14 +267,15 @@ export default function App() {
               key={JSON.stringify([line,brand,category,debouncedSearch,catalogPage,catalogSort])}
               products={visible}
               serverPage
-              renderItem={p => <ProductCard key={p.id} product={p} busy={busy} added={lastAdded===p.id} onAdd={sourceProductId=>sourceProductId?addProduct(p,sourceProductId):setSelectedProduct(p)} onOpen={()=>setSelectedProduct(p)} />}
+              renderItem={p => <ProductCard key={p.id} product={p} busy={busy} added={lastAdded===p.id} onAdd={sourceProductId=>addProduct(p,sourceProductId)} onOpen={()=>setSelectedProduct(p)} />}
             />}
-            {(pageQuery.data?.pages ?? 0)>1 && <nav aria-label="Сторінки каталогу" className={cx('useful-pagination')}>
+            {desktop && (pageQuery.data?.pages ?? 0)>1 && <nav aria-label="Сторінки каталогу" className={cx('useful-pagination')}>
               <button type="button" disabled={catalogPage<=1||pageQuery.isFetching} onClick={()=>setCatalogPage(p=>p-1)}>← Назад</button>
               <span>Сторінка {catalogPage} із {pageQuery.data?.pages}</span>
               <button type="button" disabled={catalogPage>=(pageQuery.data?.pages??0)||pageQuery.isFetching} onClick={()=>setCatalogPage(p=>p+1)}>Далі →</button>
             </nav>}
-            {!visible.length && (
+            {!desktop && catalogPage<(pageQuery.data?.pages??0) && <button type="button" className={cx('btn')} disabled={pageQuery.isFetching} onClick={()=>setCatalogPage(p=>p+1)}>Показати ще {Math.min(24,Math.max(0,(pageQuery.data?.total??0)-shownProducts.length))}</button>}
+            {!visible.length && !pageQuery.isFetching && !pageQuery.isPending && (
               <p role="status">
                 {pageQuery.isPending ? 'Завантаження товарів…' : (pageQuery.data?.total === 0 && category === 'all' && brand === 'all' && !debouncedSearch ? 'Каталог наповнюється. Товари з’являться після публікації.' : 'Товарів за цим запитом немає.')}
               </p>
