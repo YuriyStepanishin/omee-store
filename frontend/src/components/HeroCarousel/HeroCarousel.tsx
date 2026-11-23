@@ -11,9 +11,9 @@ export type HeroBanner = {
 
 const INTERVAL_MS = 6000;
 
-function optimized(url: string) {
+function optimized(url: string, width: number) {
   return url.includes('res.cloudinary.com') && url.includes('/upload/')
-    ? url.replace('/upload/', '/upload/f_auto,q_auto,w_1942/')
+    ? url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`)
     : url;
 }
 
@@ -89,7 +89,9 @@ export default function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
               <a href={slide.link || '#catalog'} className={css.link}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={optimized(slide.imageUrl)}
+                  src={optimized(slide.imageUrl, 960)}
+                  srcSet={slide.imageUrl.includes('res.cloudinary.com') && slide.imageUrl.includes('/upload/') ? [480, 768, 960, 1440, 1942].map(w => `${optimized(slide.imageUrl, w)} ${w}w`).join(', ') : undefined}
+                  sizes="100vw"
                   alt={slide.title}
                   width={1942}
                   height={809}
