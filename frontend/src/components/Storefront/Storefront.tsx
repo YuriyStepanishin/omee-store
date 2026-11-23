@@ -363,8 +363,9 @@ export default function App() {
           </div>
         </section>
       </main>
-      {selectedProduct && productError && <p role="alert" className={cx('container')}>Не вдалося завантажити деталі товару. Спробуйте відкрити його повторно.</p>}
-      {selectedProduct && (
+      {selectedProduct && productLoading && <p role="status" className={cx('container')}>Завантаження інформації про товар…</p>}
+      {selectedProduct && productError && <p role="alert" className={cx('container')}>Не вдалося завантажити деталі товару. <button type="button" onClick={() => setSelectedProduct(null)}>Закрити</button></p>}
+      {selectedProduct && fullProduct?.id === selectedProduct.id && !productError && (
         <ProductModal
           key={selectedProduct.id}
           product={fullProduct?.id===selectedProduct.id?fullProduct:selectedProduct}
