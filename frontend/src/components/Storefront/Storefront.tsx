@@ -67,6 +67,10 @@ export default function App() {
   } = useQuery({
     queryKey: ['catalog', 'public'],
     queryFn: fetchCatalog,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
