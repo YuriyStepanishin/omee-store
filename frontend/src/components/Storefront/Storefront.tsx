@@ -276,6 +276,7 @@ export default function App() {
             {!pageQuery.isError && <ProductResults
               key={JSON.stringify([line,brand,category,debouncedSearch,catalogPage,catalogSort])}
               products={visible}
+              serverPage
               renderItem={p => <ProductCard key={p.id} product={p} busy={busy} added={lastAdded===p.id} onAdd={sourceProductId=>sourceProductId?addProduct(p,sourceProductId):setSelectedProduct(p)} onOpen={()=>setSelectedProduct(p)} />}
             />}
             {(pageQuery.data?.pages ?? 0)>1 && <nav aria-label="Сторінки каталогу" className={cx('useful-pagination')}>
