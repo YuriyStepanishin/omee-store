@@ -20,8 +20,8 @@ export async function loadCatalogCategories(pool,{includeInactive=false}={}){ret
 
 // Paginated public listing. All filters apply in SQL before LIMIT/OFFSET.
 export async function loadCatalogPage(pool,{page=1,limit=24,search='',brand='',category='',line='',sort='newest'}={}) {
- const safePage=Math.max(1,Math.min(100000,Number(page)||1));
- const safeLimit=Math.max(1,Math.min(48,Number(limit)||24));
+ const safePage=Math.max(1,Math.min(100000,Math.floor(Number(page)||1)));
+ const safeLimit=Math.max(1,Math.min(48,Math.floor(Number(limit)||24)));
  const q=String(search).trim().slice(0,120);
  const selectedBrand=String(brand).trim().slice(0,120);
  const selectedCategory=String(category).trim().slice(0,120);
@@ -35,8 +35,8 @@ export async function loadCatalogPage(pool,{page=1,limit=24,search='',brand='',c
  WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('hair','догляд за волоссям') THEN 'hair'
  WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('body','догляд за тілом') THEN 'body'
  WHEN lower(coalesce(p.characteristics->>'Лінійка',p.characteristics->>'audience','')) IN ('other','інше') THEN 'other'
- WHEN concat_ws(' ',c.name,p.characteristics->>'group',p.characteristics->'sourceData'->>'category') ~* 'волосс|шампун|кондиціонер|стайлінг|hair|scalp' THEN 'hair'
- WHEN concat_ws(' ',c.name,p.characteristics->>'group',p.characteristics->'sourceData'->>'category') ~* 'тіл|шкір|облич|рук|ніг|душ|body|skin|face|крем|лосьйон|скраб' THEN 'body'
+ WHEN concat_ws(' ',c.name,p.characteristics->>'group',p.characteristics->>'Група',p.characteristics->>'Категорія',p.characteristics->'sourceData'->>'category',p.characteristics->'sourceData'->>'group') ~* 'волосс|шампун|кондиціонер|маск.*волос|стайлінг|фарб.*волос|hair|scalp' THEN 'hair'
+ WHEN concat_ws(' ',c.name,p.characteristics->>'group',p.characteristics->>'Група',p.characteristics->>'Категорія',p.characteristics->'sourceData'->>'category',p.characteristics->'sourceData'->>'group') ~* 'тіл|шкір|облич|рук|ніг|душ|body|skin|face|крем|лосьйон|скраб' THEN 'body'
  ELSE 'other' END=$4)`;
  const count=await pool.query(`SELECT count(*)::integer AS total FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE ${where}`,[q,selectedBrand,selectedCategory,selectedLine]);
  const total=count.rows[0].total;
