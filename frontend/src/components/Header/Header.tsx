@@ -85,7 +85,7 @@ export default function Header() {
           >
             <Link className={css.mobileOnly} href="/#catalog" onClick={closeMenu}>Каталог</Link>
             <Link href="/#media" onClick={closeMenu}>Журнал про корисне</Link>
-            <Link href="/#about" onClick={closeMenu}>Про магазин</Link>
+            <Link href="/#about" onClick={closeMenu}>Для покупців</Link>
             {user?.role === 'ADMIN' && (
               <Link
                 className={css.adminLink}

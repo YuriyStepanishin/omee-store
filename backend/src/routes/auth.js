@@ -21,6 +21,11 @@ export function authRoutes(config){
  router.post('/login',limited,async(req,res)=>respond(res,await service().login(parseAuth(loginSchema,req.body))));
  router.post('/refresh',limited,async(req,res)=>{try{return respond(res,await service().refresh(cookies(req).kss_refresh));}catch(error){if(error.status===401)clearSession(res,config.production);throw error;}});
  router.post('/logout',async(req,res)=>{await service().logout(cookies(req).kss_refresh);clearSession(res,config.production);res.status(204).end();});
+ router.get('/loyalty',async(req,res)=>{
+  const user=await service().me(cookies(req).kss_access);
+  const {rows}=await getPool(config.databaseUrl).query(`SELECT COALESCE(SUM(ROUND(total*0.05)),0)::integer AS points,COUNT(*)::integer AS orders FROM orders WHERE user_id=$1 AND status='DELIVERED' AND payment_status='PAID'`,[user.id]);
+  res.json({points:rows[0].points,orders:rows[0].orders,ratePercent:5,redeemEnabled:false});
+ });
  router.get('/me',async(req,res)=>res.json({user:await service().me(cookies(req).kss_access)}));
  return router;
 }

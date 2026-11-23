@@ -9,7 +9,7 @@ import ProductPhoto from '@/components/ProductPhoto/ProductPhoto';
 import { packagingLabel, withPackaging } from '@/components/ProductCard/productPackaging';
 import { canAddProduct } from '@/components/ProductCard/ProductCard';
 import { useCart } from '@/hooks/useCart';
-import { checkoutOrder, fetchCatalog } from '@/services/storeApi';
+import { checkoutOrder, fetchCatalog, fetchCartProducts } from '@/services/storeApi';
 import {
   DELIVERY_CARRIERS,
   DELIVERY_TYPE_LABELS,
@@ -66,6 +66,8 @@ export default function CartModal() {
     queryFn: fetchCatalog,
     enabled: isOpen,
   });
+  const cartIds=items.map(item=>item.productId).sort();
+  const cartProducts=useQuery({queryKey:['cart-products',cartIds],queryFn:()=>fetchCartProducts(cartIds),enabled:isOpen&&cartIds.length>0,staleTime:30_000});
   const [step, setStep] = useState<Step>('cart');
   const [mode, setMode] = useState<Mode>('delivery');
   const [form, setForm] = useState(defaults);
@@ -100,7 +102,7 @@ export default function CartModal() {
   const lines = items.map(item => ({
     ...item,
     product: (() => {
-      const base = catalog?.products.find(p => p.id === item.productId || p.variants?.some(v => v.sourceProductId === item.productId));
+      const base = cartProducts.data?.products.find(p => p.id === item.productId || p.variants?.some(v => v.sourceProductId === item.productId));
       if (!base) return undefined;
       const variant = base.variants?.find(v => v.sourceProductId === item.productId);
       if (!variant) return base.variants?.length ? undefined : base;
@@ -108,7 +110,7 @@ export default function CartModal() {
       return {...chosen, title: variant.volume == null ? chosen.title : `${chosen.title} · ${packagingLabel(variant)}`};
     })(),
   }));
-  const ready = Boolean(catalog);
+  const ready = Boolean(catalog) && (items.length===0 || Boolean(cartProducts.data));
   const orderable = lines.flatMap(line =>
     line.product &&
     canAddProduct(line.product) &&
@@ -171,6 +173,7 @@ export default function CartModal() {
       clearCart();
       setStep('done');
       await queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
       await queryClient.invalidateQueries({ queryKey: ['my-orders'] });
     } catch (caught) {
       setError(
@@ -229,19 +232,19 @@ export default function CartModal() {
             {stepTitles[step]}
           </h2>
 
-          {catalogError && (
+          {(catalogError || cartProducts.error) && (
             <div role="alert" className={css.notice}>
-              {catalogError.message}{' '}
+              {(catalogError || cartProducts.error)?.message}{' '}
               <button
                 type="button"
                 className={css.link}
-                onClick={() => void refetch()}
+                onClick={() => {void refetch();void cartProducts.refetch();}}
               >
                 Спробувати ще раз
               </button>
             </div>
           )}
-          {!ready && !catalogError && items.length > 0 && (
+          {!ready && !catalogError && !cartProducts.error && items.length > 0 && (
             <p role="status">Завантаження кошика…</p>
           )}
 

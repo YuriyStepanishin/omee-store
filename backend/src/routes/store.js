@@ -5,7 +5,7 @@ export function storeRoutes(config,dataDir) {
  const router=Router();
  const controller=storeController(config,dataDir);
  
- router.use(['/store-info','/catalog'],(req,res,next)=>{
+ router.use(['/store-info','/catalog','/catalog-page','/catalog-facets','/cart-products'],(req,res,next)=>{
    res.set('Cache-Control','no-store');
    next();
  });
@@ -13,6 +13,8 @@ export function storeRoutes(config,dataDir) {
  router.get('/store-info',controller.info);
  router.get('/catalog',controller.catalog);
  router.get('/catalog-page',controller.catalogPage);
+ router.post('/cart-products',controller.cartProducts);
+ router.get('/catalog-facets',controller.catalogFacets);
  router.get('/catalog/:id',controller.product);
  router.get('/admin/catalog',requireRole(config,'ADMIN'),controller.adminCatalog);
  router.post('/orders',controller.order);

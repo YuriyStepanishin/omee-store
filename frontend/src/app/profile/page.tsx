@@ -1,6 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { http } from '@/services/http';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
 import { logout } from '@/services/auth';
@@ -10,6 +12,7 @@ import css from './Profile.module.css';
 export default function Profile() {
   const { user, loaded, error, setSession } = useAuthStore();
   const client = useQueryClient();
+  const loyalty=useQuery({queryKey:['loyalty',user?.id],queryFn:async()=>(await http.get<{points:number;orders:number;ratePercent:number;redeemEnabled:boolean}>('/auth/loyalty')).data,enabled:Boolean(user)});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   async function signOut() {
@@ -69,6 +72,13 @@ export default function Profile() {
         <p>{user.email}</p>
         {user.phone && <p>{user.phone}</p>}
       </div>
+      <section aria-label="Програма лояльності" className={css.details}>
+        <h2>Мої бонусні бали</h2>
+        <p><strong>{loyalty.data?.points ?? '—'}</strong> балів</p>
+        <p>Нарахування: 5% від суми оплачених і доставлених замовлень, округлення до цілого бала. Бали нараховуються лише зареєстрованим покупцям.</p>
+        <p>Використання балів для оплати поки не активоване.</p>
+        {loyalty.isError && <p role="alert">Не вдалося отримати баланс бонусів.</p>}
+      </section>
       <nav className={css.navigation} aria-label="Розділи кабінету">
         <Link href="/profile/orders">
           <strong>Мої замовлення</strong>

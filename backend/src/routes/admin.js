@@ -37,7 +37,7 @@ export function adminRoutes(config) {
     const page = Number(req.query.page || 1);
     if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) return res.status(400).json({message:'Некоректна сторінка.'});
     const pool = getPool(config.databaseUrl);
-    const { rows } = await pool.query("SELECT id,name,email,phone,created_at FROM users WHERE role='CUSTOMER' ORDER BY created_at DESC,id LIMIT 50 OFFSET $1", [(page-1)*50]);
+    const { rows } = await pool.query("SELECT u.id,u.name,u.email,u.phone,u.created_at,COALESCE(l.points,0)::integer AS loyalty_points FROM users u LEFT JOIN LATERAL (SELECT SUM(ROUND(o.total*0.05)) AS points FROM orders o WHERE o.user_id=u.id AND o.status='DELIVERED' AND o.payment_status='PAID') l ON true WHERE u.role='CUSTOMER' ORDER BY u.created_at DESC,u.id LIMIT 50 OFFSET $1", [(page-1)*50]);
     res.json({items:rows});
   });
   router.get('/admin/settings', (req, res) => res.json({emailRecoveryConfigured:mailConfigured(config)}));
