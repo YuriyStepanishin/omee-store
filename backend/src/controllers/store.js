@@ -2,7 +2,7 @@ import {articleRepository} from '../models/articles.js';
 import {contentRepository} from '../models/content.js';
 import {catalog} from '../../catalog.mjs';
 import {getPool} from '../config/db.js';
-import {loadCatalog,loadCatalogCategories} from '../models/catalog.js';
+import {loadCatalog,loadCatalogPage,loadCatalogCategories} from '../models/catalog.js';
 import {createOrder} from '../models/orders.js';
 import {validateOrder} from '../validators/order.js';
 import {saveDemoOrder} from '../services/fileOrderStore.js';
@@ -34,6 +34,7 @@ export function storeController(config,dataDir) {
  return {
  info:async(req,res)=>res.json({info:config.mode==='demo'?catalog.info:await contentRepository(getPool(config.databaseUrl)).publicInfo()}),
  catalog:async(req,res)=>res.json(config.mode==='demo'?{...catalog,demo:true}:await readCatalog()),
+ catalogPage:async(req,res)=>res.json(await loadCatalogPage(getPool(config.databaseUrl),{page:req.query.page,limit:req.query.limit})),
  adminCatalog:async(req,res)=>res.json(await readCatalog(true)),
  product:async(req,res)=>{
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id))return res.status(400).json({message:'Некоректний ідентифікатор товару.'});
