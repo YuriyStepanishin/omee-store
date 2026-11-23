@@ -11,12 +11,19 @@ import {cookies} from '../services/tokens.js';
 export function storeController(config,dataDir) {
  async function readCatalog(preview=false){
   const pool=getPool(config.databaseUrl);
+  const started=Date.now();
+  const timed=async(name,task)=>{
+   const start=Date.now();
+   try{return await task();}
+   finally{console.info(`[catalog-perf] ${name} ${Date.now()-start}ms`);}
+  };
   const [content,categories,products,blog]=await Promise.all([
-   contentRepository(pool).publicContent(),
-   loadCatalogCategories(pool,{includeInactive:preview}),
-   loadCatalog(pool,{includeDrafts:preview}),
-   articleRepository(pool).list(),
+   timed('content',()=>contentRepository(pool).publicContent()),
+   timed('categories',()=>loadCatalogCategories(pool,{includeInactive:preview})),
+   timed('products',()=>loadCatalog(pool,{includeDrafts:preview})),
+   timed('blog',()=>articleRepository(pool).list()),
   ]);
+  console.info(`[catalog-perf] total ${Date.now()-started}ms preview=${preview} products=${products.length}`);
   return {...content,categories,products,blog,demo:false,...(preview?{preview:true}:{})};
  }
  return {
