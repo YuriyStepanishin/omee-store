@@ -5,15 +5,16 @@ import {useDesktop} from '@/hooks/useDesktop';
 import type {Product} from '@/types/store';
 import {PAGE_SIZE,productWindow} from '@/utils/pagination';
 import css from './ProductResults.module.css';
-interface Props{products:Product[];renderItem:(product:Product)=>ReactNode;}
+interface Props{products:Product[];renderItem:(product:Product)=>ReactNode;serverPage?:boolean;}
 export default function ProductResults(props:Props){
  const desktop=useDesktop();
  return <Results key={desktop?'desktop':'compact'} {...props} desktop={desktop}/>;
 }
-function Results({products,renderItem,desktop}:Props&{desktop:boolean}){
+function Results({products,renderItem,desktop,serverPage=false}:Props&{desktop:boolean}){
  const [page,setPage]=useState(0);
  const [shown,setShown]=useState(PAGE_SIZE);
  const view=productWindow(products.length,page,shown,desktop);
+ if(serverPage)return <ul className={css.grid} id="catalog-products">{products.map(renderItem)}</ul>;
  function selectPage({selected}:{selected:number}){
   setPage(selected);
   const catalog=document.getElementById('catalog');
