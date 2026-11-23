@@ -24,7 +24,9 @@ export function storeController(config,dataDir) {
    timed('blog',()=>articleRepository(pool).list()),
   ]);
   console.info(`[catalog-perf] total ${Date.now()-started}ms preview=${preview} products=${products.length}`);
-  return {...content,categories,products,blog,demo:false,...(preview?{preview:true}:{})};
+  const response={...content,categories,products,blog,demo:false,...(preview?{preview:true}:{})};
+  console.info(`[catalog-perf] payload ${Buffer.byteLength(JSON.stringify(response))} bytes`);
+  return response;
  }
  return {
  info:async(req,res)=>res.json({info:config.mode==='demo'?catalog.info:await contentRepository(getPool(config.databaseUrl)).publicInfo()}),
