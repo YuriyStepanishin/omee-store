@@ -74,7 +74,7 @@ export default function App() {
   });
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
-  const [line, setLine] = useState<ProductLine>('women');
+  const [line, setLine] = useState<ProductLine>('hair');
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -121,7 +121,7 @@ export default function App() {
     (currentUsefulPage + 1) * usefulPageSize
   );
 
-  const lineProducts = products.filter(p => (p.audience || 'women') === line);
+  const lineProducts = products.filter(p => (p.audience || 'other') === line);
   const visible = lineProducts.filter(
     p =>
       (category === 'all' || (p.groups || [p.category]).includes(category)) &&
@@ -262,7 +262,7 @@ export default function App() {
                   setBrand('all');
                   setCategory('all');
                   setSearch('');
-                  setLine('women');
+                  setLine('hair');
                 }}
               >
                 Скинути
