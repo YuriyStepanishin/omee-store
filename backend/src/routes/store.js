@@ -13,6 +13,7 @@ export function storeRoutes(config,dataDir) {
  router.get('/store-info',controller.info);
  router.get('/catalog',controller.catalog);
  router.get('/catalog-page',controller.catalogPage);
+ router.post('/cart-products',controller.cartProducts);
  router.get('/catalog-facets',controller.catalogFacets);
  router.get('/catalog/:id',controller.product);
  router.get('/admin/catalog',requireRole(config,'ADMIN'),controller.adminCatalog);
