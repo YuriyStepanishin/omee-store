@@ -9,7 +9,7 @@ import {saveDemoOrder} from '../services/fileOrderStore.js';
 import {authService} from '../services/auth.js';
 import {cookies} from '../services/tokens.js';
 export function storeController(config,dataDir) {
- async function readCatalog(preview=false){
+ async function readCatalog(preview=false,lightweight=false){
   const pool=getPool(config.databaseUrl);
   const started=Date.now();
   const timed=async(name,task)=>{
@@ -20,7 +20,7 @@ export function storeController(config,dataDir) {
   const [content,categories,products,blog]=await Promise.all([
    timed('content',()=>contentRepository(pool).publicContent()),
    timed('categories',()=>loadCatalogCategories(pool,{includeInactive:preview})),
-   timed('products',()=>loadCatalog(pool,{includeDrafts:preview})),
+   timed('products',()=>lightweight?Promise.resolve([]):loadCatalog(pool,{includeDrafts:preview})),
    timed('blog',()=>articleRepository(pool).list()),
   ]);
   console.info(`[catalog-perf] total ${Date.now()-started}ms preview=${preview} products=${products.length}`);
@@ -33,7 +33,7 @@ export function storeController(config,dataDir) {
  }
  return {
  info:async(req,res)=>res.json({info:config.mode==='demo'?catalog.info:await contentRepository(getPool(config.databaseUrl)).publicInfo()}),
- catalog:async(req,res)=>res.json(config.mode==='demo'?{...catalog,demo:true}:await readCatalog()),
+ catalog:async(req,res)=>res.json(config.mode==='demo'?{...catalog,demo:true}:await readCatalog(false,req.query.lightweight==='1')),
  catalogFacets:async(req,res)=>res.json(await loadCatalogFacets(getPool(config.databaseUrl))),
  catalogPage:async(req,res)=>res.json(await loadCatalogPage(getPool(config.databaseUrl),{page:req.query.page,limit:req.query.limit,search:req.query.search,brand:req.query.brand,category:req.query.category,line:req.query.line,sort:req.query.sort})),
  adminCatalog:async(req,res)=>res.json(await readCatalog(true)),
