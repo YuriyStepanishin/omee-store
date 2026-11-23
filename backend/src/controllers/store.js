@@ -40,7 +40,7 @@ export function storeController(config,dataDir) {
   if(!Array.isArray(ids)||ids.length>100||ids.some(id=>typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))return res.status(400).json({message:'Некоректний список товарів.'});
   const pool=getPool(config.databaseUrl);
   const {rows}=await pool.query('SELECT DISTINCT product_id FROM product_variants WHERE source_product_id=ANY($1::uuid[])',[...new Set(ids)]);
-  const products=(await Promise.all(rows.map(row=>loadCatalog(pool,{productId:row.product_id})))).flat();
+  const products=rows.length?await loadCatalog(pool,{productIds:rows.map(row=>row.product_id)}):[];
   res.json({products});
  },
  catalogFacets:async(req,res)=>res.json(config.mode==='demo'?{categories:[...new Set(catalog.products.map(p=>p.category).filter(Boolean))],brands:[...new Set(catalog.products.map(p=>p.brand).filter(Boolean))]}:await loadCatalogFacets(getPool(config.databaseUrl))),
