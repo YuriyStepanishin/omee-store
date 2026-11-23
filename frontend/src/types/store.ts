@@ -8,7 +8,7 @@ export interface Product {
     title: string;
     sku: string;
     category: ProductCategory;
-    audience?: 'women'|'men'|'kids';
+    audience?: 'hair'|'body'|'other'|'women'|'men'|'kids';
     brand?: string;
     group?: string;
     groups?: string[];
