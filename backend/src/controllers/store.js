@@ -34,7 +34,7 @@ export function storeController(config,dataDir) {
  return {
  info:async(req,res)=>res.json({info:config.mode==='demo'?catalog.info:await contentRepository(getPool(config.databaseUrl)).publicInfo()}),
  catalog:async(req,res)=>res.json(config.mode==='demo'?{...catalog,demo:true}:await readCatalog()),
- catalogPage:async(req,res)=>res.json(await loadCatalogPage(getPool(config.databaseUrl),{page:req.query.page,limit:req.query.limit})),
+ catalogPage:async(req,res)=>res.json(await loadCatalogPage(getPool(config.databaseUrl),{page:req.query.page,limit:req.query.limit,search:req.query.search,brand:req.query.brand,category:req.query.category,line:req.query.line,sort:req.query.sort})),
  adminCatalog:async(req,res)=>res.json(await readCatalog(true)),
  product:async(req,res)=>{
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id))return res.status(400).json({message:'Некоректний ідентифікатор товару.'});
