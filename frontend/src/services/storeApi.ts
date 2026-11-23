@@ -1,6 +1,6 @@
 import type { CatalogResponse, CheckoutPayload, Product } from '@/types/store';
 import { http } from './http';
-export const fetchCatalog = async () => (await http.get<CatalogResponse>('/catalog')).data;
+export const fetchCatalog = async () => (await http.get<CatalogResponse>('/catalog', {params:{lightweight:1}})).data;
 export interface CatalogPageResponse { products: Product[]; page: number; limit: number; total: number; pages: number; }
 export interface CatalogPageFilters {page:number;limit?:number;search?:string;brand?:string;category?:string;line?:string;sort?:string;}
 export const fetchCatalogFacets = async () => (await http.get<{categories:string[];brands:string[]}>('/catalog-facets')).data;
