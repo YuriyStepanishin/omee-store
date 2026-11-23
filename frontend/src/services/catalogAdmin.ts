@@ -30,7 +30,7 @@ export interface AdminProduct extends ProductInput {
   categoryName: string;
   categorySlug?: string;
   brand?: string;
-  audience?: 'women' | 'men' | 'kids';
+  audience?: 'hair' | 'body' | 'other';
 }
 export interface ProductList {
   items: AdminProduct[];
@@ -62,7 +62,7 @@ export async function uploadPhoto(file: File) {
 
 export const saveProductLine = (
   id: string,
-  audience: 'women' | 'men' | 'kids'
+  audience: 'hair' | 'body' | 'other'
 ) => http.put('/products/' + id + '/line', { audience });
 
 export const deleteProduct = (id: string) =>
