@@ -27,6 +27,7 @@ export function storeController(config,dataDir) {
   const response={...content,categories,products,blog,demo:false,...(preview?{preview:true}:{})};
   console.info(`[catalog-perf] payload ${Buffer.byteLength(JSON.stringify(response))} bytes`);
   console.info('[catalog-perf] payload-breakdown '+JSON.stringify(Object.fromEntries(['products','categories','banners','media','blog','info'].map(key=>[key,Buffer.byteLength(JSON.stringify(response[key]??null))]))));
+  console.info('[catalog-perf] product-fields '+JSON.stringify(Object.fromEntries(['characteristics','details','description','images','variants','groups','badges'].map(key=>[key,products.reduce((sum,p)=>sum+Buffer.byteLength(JSON.stringify(p[key]??null)),0)]))));
   return response;
  }
  return {
