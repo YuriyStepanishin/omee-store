@@ -37,7 +37,7 @@ export function storeController(config,dataDir) {
  cartProducts:async(req,res)=>{
   if(config.mode==='demo')return res.json({products:catalog.products});
   const ids=req.body?.ids;
-  if(!Array.isArray(ids)||ids.length>100||ids.some(id=>typeof id!=='string'||!/^[0-9a-f-]{36}$/i.test(id)))return res.status(400).json({message:'Некоректний список товарів.'});
+  if(!Array.isArray(ids)||ids.length>100||ids.some(id=>typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))return res.status(400).json({message:'Некоректний список товарів.'});
   const pool=getPool(config.databaseUrl);
   const {rows}=await pool.query('SELECT DISTINCT product_id FROM product_variants WHERE source_product_id=ANY($1::uuid[])',[...new Set(ids)]);
   const products=(await Promise.all(rows.map(row=>loadCatalog(pool,{productId:row.product_id})))).flat();
