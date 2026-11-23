@@ -5,7 +5,7 @@ export function storeRoutes(config,dataDir) {
  const router=Router();
  const controller=storeController(config,dataDir);
  
- router.use(['/store-info','/catalog'],(req,res,next)=>{
+ router.use(['/store-info','/catalog','/catalog-page','/catalog-facets'],(req,res,next)=>{
    res.set('Cache-Control','no-store');
    next();
  });
