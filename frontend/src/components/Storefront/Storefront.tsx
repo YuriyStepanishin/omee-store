@@ -13,7 +13,7 @@ import { PRODUCT_LINES, type ProductLine } from '@/constants/productLines';
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCatalog, fetchProduct } from '@/services/storeApi';
+import { fetchCatalog, fetchCatalogPage, fetchProduct } from '@/services/storeApi';
 import { useCart } from '@/hooks/useCart';
 import css from './Storefront.module.css';
 const cx = (value: string) =>
@@ -76,6 +76,12 @@ export default function App() {
   const [brand, setBrand] = useState('all');
   const [line, setLine] = useState<ProductLine>('hair');
   const [search, setSearch] = useState('');
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogSort, setCatalogSort] = useState('newest');
+  const [debouncedSearch,setDebouncedSearch]=useState('');
+  useEffect(()=>{const id=setTimeout(()=>setDebouncedSearch(search),300);return ()=>clearTimeout(id);},[search]);
+  useEffect(()=>setCatalogPage(1),[category,brand,line,debouncedSearch,catalogSort]);
+  const pageQuery=useQuery({queryKey:['catalog','page',catalogPage,category,brand,line,debouncedSearch,catalogSort],queryFn:()=>fetchCatalogPage({page:catalogPage,limit:24,category:category==='all'?'':category,brand:brand==='all'?'':brand,line,search:debouncedSearch,sort:catalogSort}),staleTime:60_000,retry:1});
   const [busy, setBusy] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const {data:fullProduct,isPending:productLoading,error:productError}=useQuery({
@@ -122,14 +128,7 @@ export default function App() {
   );
 
   const lineProducts = products.filter(p => (p.audience || 'other') === line);
-  const visible = lineProducts.filter(
-    p =>
-      (category === 'all' || (p.groups || [p.category]).includes(category)) &&
-      (brand === 'all' || p.brand === brand) &&
-      `${p.title} ${p.sku} ${p.brand || ''} ${(p.groups || [p.category]).join(' ')}`
-        .toLocaleLowerCase('uk')
-        .includes(search.toLocaleLowerCase('uk'))
-  );
+  const visible = pageQuery.data?.products ?? [];
   function addProduct(product: Product, sourceProductId?: string) {
     const variants = availableVariants(product);
     const variant = sourceProductId ? variants.find(v => v.sourceProductId === sourceProductId) : variants[0];
@@ -255,6 +254,7 @@ export default function App() {
                     ))}
                 </select>
               </label>
+              <label>Сортування<select value={catalogSort} onChange={e=>setCatalogSort(e.target.value)}><option value="newest">Спочатку нові</option><option value="name">За назвою</option><option value="price_asc">Спочатку дешевші</option><option value="price_desc">Спочатку дорожчі</option></select></label>
               <button
                 type="button"
                 className={cx('btn btn--ghost')}
@@ -269,22 +269,20 @@ export default function App() {
               </button>
             </div>
             <p className={cx('catalog-count')} role="status">
-              Знайдено товарів: {visible.length}
+              Знайдено товарів: {pageQuery.data?.total ?? '…'}
             </p>
-            <ProductResults
-              key={JSON.stringify([line, brand, category, search])}
+            {pageQuery.isFetching && <p role="status">Завантаження товарів…</p>}
+            {pageQuery.isError && <p role="alert">Помилка завантаження каталогу. <button type="button" onClick={()=>void pageQuery.refetch()}>Повторити</button></p>}
+            {!pageQuery.isError && <ProductResults
+              key={JSON.stringify([line,brand,category,debouncedSearch,catalogPage,catalogSort])}
               products={visible}
-              renderItem={p => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  busy={busy}
-                  added={lastAdded === p.id}
-                  onAdd={sourceProductId => sourceProductId ? addProduct(p,sourceProductId) : setSelectedProduct(p)}
-                  onOpen={() => setSelectedProduct(p)}
-                />
-              )}
-            />
+              renderItem={p => <ProductCard key={p.id} product={p} busy={busy} added={lastAdded===p.id} onAdd={sourceProductId=>sourceProductId?addProduct(p,sourceProductId):setSelectedProduct(p)} onOpen={()=>setSelectedProduct(p)} />}
+            />}
+            {(pageQuery.data?.pages ?? 0)>1 && <nav aria-label="Сторінки каталогу" className={cx('useful-pagination')}>
+              <button type="button" disabled={catalogPage<=1||pageQuery.isFetching} onClick={()=>setCatalogPage(p=>p-1)}>← Назад</button>
+              <span>Сторінка {catalogPage} із {pageQuery.data?.pages}</span>
+              <button type="button" disabled={catalogPage>=(pageQuery.data?.pages??0)||pageQuery.isFetching} onClick={()=>setCatalogPage(p=>p+1)}>Далі →</button>
+            </nav>}
             {!visible.length && (
               <p role="status">
                 {!products.length
