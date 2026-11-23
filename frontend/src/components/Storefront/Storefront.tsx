@@ -13,7 +13,7 @@ import { PRODUCT_LINES, type ProductLine } from '@/constants/productLines';
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCatalog } from '@/services/storeApi';
+import { fetchCatalog, fetchProduct } from '@/services/storeApi';
 import { useCart } from '@/hooks/useCart';
 import css from './Storefront.module.css';
 const cx = (value: string) =>
@@ -78,6 +78,13 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const {data:fullProduct,isPending:productLoading,error:productError}=useQuery({
+    queryKey:['catalog','product',selectedProduct?.id],
+    queryFn:()=>fetchProduct(selectedProduct!.id),
+    enabled:Boolean(selectedProduct),
+    staleTime:60*1000,
+    retry:1,
+  });
   const [lastAdded, setLastAdded] = useState('');
   const [cartNotice, setCartNotice] = useState('');
   const [usefulColumns, setUsefulColumns] = useState(3);
@@ -356,11 +363,12 @@ export default function App() {
           </div>
         </section>
       </main>
+      {selectedProduct && productError && <p role="alert" className={cx('container')}>Не вдалося завантажити деталі товару. Спробуйте відкрити його повторно.</p>}
       {selectedProduct && (
         <ProductModal
           key={selectedProduct.id}
-          product={selectedProduct}
-          busy={busy}
+          product={fullProduct?.id===selectedProduct.id?fullProduct:selectedProduct}
+          busy={busy || productLoading || Boolean(productError)}
           added={lastAdded === selectedProduct.id}
           onAdd={(sourceProductId) => addProduct(selectedProduct,sourceProductId)}
           onClose={() => setSelectedProduct(null)}
