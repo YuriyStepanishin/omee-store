@@ -362,6 +362,17 @@ export default function App() {
             {aboutTagline&&<p className={cx('about__tagline')}>{aboutTagline}</p>}
           </div>
         </section>
+        <section className={cx('section')} id="buyers-info" aria-label="Інформація для покупців">
+          <div className={cx('container')}>
+            <h2 className={cx('section__title')}>Для покупців</h2>
+            <div className={cx('useful-grid')}>
+              <article id="delivery"><h3>Доставка</h3><p>Доступні способи доставки та відділення обираються під час оформлення замовлення. Підсумкові умови підтверджуються перед відправленням.</p></article>
+              <article id="payment"><h3>Оплата</h3><p>Наразі замовлення оформлюється з підтвердженням менеджером. Онлайн-оплата ще не підключена; кошти на сайті не списуються.</p></article>
+              <article id="returns"><h3>Повернення</h3><p>Для звернення щодо повернення або обміну зв’яжіться з магазином через контакти в особистому кабінеті чи на сайті. Умови залежать від виду товару та вимог законодавства України.</p></article>
+              <article id="offer"><h3>Договір оферти</h3><p>Повний текст публічної оферти готується до публікації. До його затвердження цей блок не є договором і не замінює юридичних умов продажу.</p></article>
+            </div>
+          </div>
+        </section>
       </main>
       {selectedProduct && productLoading && <p role="status" className={cx('container')}>Завантаження інформації про товар…</p>}
       {selectedProduct && productError && <p role="alert" className={cx('container')}>Не вдалося завантажити деталі товару. <button type="button" onClick={() => setSelectedProduct(null)}>Закрити</button></p>}
