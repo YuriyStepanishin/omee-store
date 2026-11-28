@@ -21,7 +21,7 @@
     "media:import": "node --env-file-if-exists=.env src/utils/importHairMedia.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

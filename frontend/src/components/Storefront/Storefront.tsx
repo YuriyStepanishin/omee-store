@@ -23,6 +23,7 @@ import {
   fetchCatalogPage,
   fetchCatalogFacets,
   fetchProduct,
+  type CatalogPageResponse,
 } from '@/services/storeApi';
 import { useCart } from '@/hooks/useCart';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -118,7 +119,7 @@ export default function App() {
     search: debouncedSearch,
     sort: catalogSort,
   };
-  const desktopCatalog = useQuery({
+  const desktopCatalog = useQuery<CatalogPageResponse>({
     queryKey: ['catalog', 'page', catalogPage, ...catalogFilters],
     enabled: desktop,
     placeholderData: (previous, query) =>

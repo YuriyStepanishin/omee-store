@@ -25,6 +25,6 @@
     "media:import": "npm --prefix backend run media:import --"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   }
 }
