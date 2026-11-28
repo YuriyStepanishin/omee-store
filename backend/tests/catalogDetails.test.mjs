@@ -48,3 +48,22 @@ test('brand category is not invented as product group; description falls back to
     'Маски'
   );
 });
+
+test('saved edits suppress removed imported characteristics and a cleared description', () => {
+  const details = catalogDetails({
+    description: '',
+    characteristics: {
+      sourceFieldsOverridden: true,
+      'Лінійка': 'Догляд за волоссям',
+      pH: '6',
+      sourceData: {
+        productDescription: 'Imported description',
+        characteristics: { pH: '5', Weight: '0.3 kg' },
+        usage: 'Нанести на волосся',
+      },
+    },
+  });
+  assert.equal(details.description, '');
+  assert.deepEqual(details.characteristics, { pH: '6' });
+  assert.equal(details.details[0].text, 'Нанести на волосся');
+});

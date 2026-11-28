@@ -4,7 +4,12 @@ import {catalogDetails} from './catalogDetails.js';
 import {LINE_LABELS} from './productAudience.js';
 const notFound=()=>Object.assign(new Error('Запис не знайдено.'),{status:404});
 export function catalogRepository(pool){
- const mapProduct=row=>({...row,audience:catalogDetails({...row,category:row.categoryName}).audience,brand:catalogDetails(row).brand,price:Number(row.price),oldPrice:row.oldPrice===null?null:Number(row.oldPrice),variants:(row.variants||[]).map(v=>({...v,price:Number(v.price),oldPrice:v.oldPrice===null?null:Number(v.oldPrice),volume:v.volume===null?null:Number(v.volume)}))});
+ const mapProduct=row=>{
+  const details=catalogDetails({...row,category:row.categoryName});
+  return {...row,audience:details.audience,brand:details.brand,description:details.description,
+   characteristics:{...row.characteristics,...details.characteristics},price:Number(row.price),
+   oldPrice:row.oldPrice===null?null:Number(row.oldPrice),variants:(row.variants||[]).map(v=>({...v,price:Number(v.price),oldPrice:v.oldPrice===null?null:Number(v.oldPrice),volume:v.volume===null?null:Number(v.volume)}))};
+ };
  const productSelect=`SELECT p.id,p.category_id AS "categoryId",p.name,p.slug,p.description,p.price,p.old_price AS "oldPrice",p.stock,p.sku,p.is_active AS "isActive",p.characteristics,p.badges,c.name AS "categoryName",c.slug AS "categorySlug",p.brand_id AS "brandId",b.name AS "brandName",COALESCE((SELECT json_agg(i.image_url ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id),'[]'::json) AS images,${variantJson()} AS variants FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id`;
  return {
   async categories(admin=false){return catalogDictionaries(pool).list('categories',admin);},
@@ -52,7 +57,8 @@ const category=(await client.query('SELECT id,name,slug FROM categories WHERE id
 if(!category||/^(import|brand)-/.test(category.slug||''))throw Object.assign(new Error('Оберіть категорію товару, а не бренд.'),{status:400});
 let preserved={};let existingBrandId=null;
 if(id){const current=(await client.query('SELECT characteristics,brand_id FROM products p WHERE id=$1 AND '+canonicalProduct+' FOR UPDATE',[id])).rows[0];if(!current)throw notFound();existingBrandId=current.brand_id||null;preserved=Object.fromEntries(Object.entries(current.characteristics||{}).filter(([key,value])=>key==='Лінійка'||key==='audience'||key.startsWith('source')||value&&typeof value==='object'));}
-const characteristics={...preserved,...data.characteristics};
+const editable=Object.fromEntries(Object.entries(data.characteristics).filter(([key])=>!key.startsWith('source')));
+const characteristics={...preserved,...editable,sourceFieldsOverridden:true};
 if(data.audience) characteristics['Лінійка']=LINE_LABELS[data.audience];
 if(category.name)characteristics.group=category.name;
 const brandId=data.brandId===undefined?existingBrandId:data.brandId;

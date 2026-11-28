@@ -5,7 +5,7 @@ import multer from 'multer';
 import {getPool} from '../config/db.js';
 import {requireRole} from '../middleware/auth.js';
 import {catalogRepository} from '../models/catalogAdmin.js';
-import {categorySchema,productSchema,audienceSchema,listSchema,adminProductListSchema,validate,validateId} from '../validators/catalog.js';
+import {categorySchema,productSchema,productEditSchema,audienceSchema,listSchema,adminProductListSchema,validate,validateId} from '../validators/catalog.js';
 import {uploadImage,uploadVideo} from '../services/upload.js';
 import {createUploadSignature,verifyUploadedAsset,verifyUploadedUrls} from '../services/cloudinaryUploads.js';
 export function catalogRoutes(config){const router=Router();
@@ -38,7 +38,24 @@ export function catalogRoutes(config){const router=Router();
  router.post('/admin/products/classify',admin,async(req,res)=>res.json(await prepareCatalog(getPool(config.databaseUrl))));
  router.post('/products',admin,async(req,res)=>{const data=validate(productSchema,req.body);await verifyUploadedUrls(data.images,'image');res.status(201).json(await repo().saveProduct(data));});
  router.put('/products/:id/line',admin,async(req,res)=>{const {audience}=validate(audienceSchema,req.body);res.json(await repo().saveAudience(validateId(req.params.id),audience));});
- router.put('/products/:id',admin,async(req,res)=>{const data=validate(productSchema,req.body);await verifyUploadedUrls(data.images,'image');res.json(await repo().saveProduct(data,validateId(req.params.id)));});
+ router.put('/products/:id',admin,async(req,res)=>{
+  const id=validateId(req.params.id);
+  const data=validate(productEditSchema,req.body);
+  const catalog=repo();
+  const existing=await catalog.product(id,true);
+  const existingImages=new Set(existing.images);
+  const newImages=data.images.filter(url=>!existingImages.has(url));
+  if(data.images.length>8&&(newImages.length||data.images.length>existing.images.length)){
+   return res.status(400).json({message:'Щоб додати фото, залиште не більше 8 зображень.'});
+  }
+  for(const [name,value] of Object.entries(data.characteristics)){
+   if((name.length>80||value.length>500)&&existing.characteristics[name]!==value){
+    return res.status(400).json({message:'Для нових або змінених характеристик назва може містити до 80, а значення — до 500 символів.'});
+   }
+  }
+  await verifyUploadedUrls(newImages,'image');
+  res.json(await catalog.saveProduct(data,id));
+ });
  router.patch('/admin/products/:id/publication',admin,async(req,res)=>{if(typeof req.body?.isActive!=='boolean')return res.status(400).json({message:'isActive має бути boolean.'});res.json(await repo().setPublication(validateId(req.params.id),req.body.isActive));});
  router.delete('/admin/products/:id',admin,async(req,res)=>{await repo().deleteProduct(validateId(req.params.id));res.status(204).end();});
  router.delete('/products/:id',admin,async(req,res)=>{await repo().archiveProduct(validateId(req.params.id));res.status(204).end();});

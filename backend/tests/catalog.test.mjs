@@ -38,6 +38,33 @@ test('product and image replacement are one transaction; image failure rolls bac
  fail=true;calls=[];released=false;await assert.rejects(()=>repo.saveProduct(product,id));assert.equal(calls.at(-1).sql,'ROLLBACK');assert.ok(released);
 });
 function request(app,url,cookie,method='GET',body){return new Promise((resolve,reject)=>{const req=new IncomingMessage(new Socket());req.method=method;req.url=url;req.headers={...(cookie?{cookie}:{}),...(body?{'content-type':'application/json','content-length':Buffer.byteLength(JSON.stringify(body))}:{})};if(body)req.push(JSON.stringify(body));req.push(null);const res=new ServerResponse(req);res.end=function(responseBody){this.finished=true;this.emit('finish');resolve({status:this.statusCode,body:responseBody?JSON.parse(responseBody.toString()):null});return this;};app.handle(req,res,reject);});}
+test('editing an imported product preserves oversized existing fields and skips verification for saved photos',async()=>{
+ const config={mode:'postgres',databaseUrl:'postgres://localhost/catalog-edit-test',origins:[],accessSecret:'a'.repeat(48),refreshSecret:'b'.repeat(48)};
+ const pool=getPool(config.databaseUrl);
+ const images=Array.from({length:9},(_,i)=>`https://res.cloudinary.com/legacy/image/upload/v1/imported-${i}.jpg`);
+ const value='а'.repeat(501);
+ const sourceData={characteristics:{Description:value}};
+ const current={id,images,price:720,oldPrice:null,characteristics:{sourceData}};
+ let saved;
+ pool.query=async sql=>({rows:sql.includes('FROM users')?[{id,role:'ADMIN'}]:[current]});
+ pool.connect=async()=>({async query(sql,values){
+  if(sql.startsWith('UPDATE products SET category_id'))saved=values;
+  return {rows:[{id,characteristics:{sourceData}}]};
+ },release(){}});
+ try{
+  const cookie='kss_access='+signSession({id},config).access;
+  const app=createApp(config);
+  const edited={...product,name:'Нова назва',images,characteristics:{Description:value}};
+  const url='/api/products/'+id;
+  assert.equal((await request(app,url,cookie,'PUT',edited)).status,200);
+  assert.equal(saved[1],'Нова назва');
+  assert.deepEqual(JSON.parse(saved[9]),{sourceData,Description:value,sourceFieldsOverridden:true});
+  assert.equal((await request(app,url,cookie,'PUT',{...edited,characteristics:{Description:value+'а'}})).status,400);
+  assert.equal((await request(app,url,cookie,'PUT',{...edited,images:[...images.slice(1),'https://example.com/new.jpg']})).status,400);
+  assert.equal((await request(app,url,cookie,'PUT',{...edited,characteristics:{}})).status,200);
+  assert.equal(Object.hasOwn(JSON.parse(saved[9]),'Description'),false);
+ }finally{await closePool();}
+});
 test('Express rejects guests and customers on admin routes, even with direct URL access',async()=>{
  const config={mode:'postgres',databaseUrl:'postgres://localhost/test',origins:[],accessSecret:'a'.repeat(48),refreshSecret:'b'.repeat(48)};
  const pool=getPool(config.databaseUrl);let role='CUSTOMER';pool.query=async sql=>({rows:sql.includes('FROM users')?[{id,name:'Тест',email:'test@example.com',role}]:[]});

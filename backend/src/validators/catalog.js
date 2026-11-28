@@ -67,6 +67,10 @@ export const productSchema = z.object({
   }
 });
 export const listSchema=z.object({page:z.coerce.number().int().min(1).max(100000).default(1),limit:z.coerce.number().int().min(1).max(100).default(20),q:z.string().trim().max(200).default(''),category:z.string().uuid().optional(),sort:z.enum(['newest','price_asc','price_desc','name']).default('newest')});
+export const productEditSchema = productSchema.safeExtend({
+  images: z.array(image).default([]),
+  characteristics: z.record(z.string(), z.string()).default({}),
+});
 export const adminProductListSchema = listSchema.extend({
   brand: z.string().uuid().optional(),
   status: z.enum(['published', 'unpublished']).optional(),
