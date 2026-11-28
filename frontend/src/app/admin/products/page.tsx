@@ -13,6 +13,7 @@ import {
 import {
   getCategories,
   getBrands,
+  getProduct,
   getProducts,
   saveProduct,
   deleteProduct,
@@ -46,6 +47,20 @@ const defaults = {
   badges: [] as ProductBadge[],
   characteristics: [] as Array<{ name: string; value: string }>,
 };
+
+const managedCharacteristics = new Set([
+  'brand', 'brandId', 'Бренд', 'Brand', 'group', 'Група', 'Лінійка', 'audience',
+]);
+
+function editableCharacteristics(product: AdminProduct) {
+  return Object.entries(product.characteristics).filter(
+    ([name, value]) =>
+      typeof value === 'string' &&
+      !name.startsWith('source') &&
+      !managedCharacteristics.has(name)
+  );
+}
+
 export default function Products() {
   const client = useQueryClient();
   const [page, setPage] = useState(1);
@@ -96,6 +111,7 @@ export default function Products() {
   const [id, setId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
   async function refresh() {
     await Promise.all([
       client.invalidateQueries({ queryKey: ['admin', 'products'] }),
@@ -105,6 +121,7 @@ export default function Products() {
   }
   function edit(product: AdminProduct) {
     setMessage('');
+    setSaveError('');
     setId(product.id);
     setForm({
       categoryId:
@@ -152,23 +169,7 @@ export default function Products() {
           ],
       isActive: product.isActive,
       images: product.images,
-      characteristics: Object.entries(product.characteristics)
-        .filter(
-          ([name, value]) =>
-            typeof value === 'string' &&
-            !name.startsWith('source') &&
-            ![
-              'brand',
-              'brandId',
-              'Бренд',
-              'Brand',
-              'group',
-              'Група',
-              'Лінійка',
-              'audience',
-            ].includes(name)
-        )
-        .map(([name, value]) => ({ name, value })),
+      characteristics: editableCharacteristics(product).map(([name, value]) => ({ name, value })),
       badges: product.badges || [],
     });
     setMessage('');
@@ -178,6 +179,7 @@ export default function Products() {
     if (busy) return;
     setBusy(true);
     setMessage('');
+    setSaveError('');
     try {
       const rows = form.characteristics.filter(
         row => row.name.trim() || row.value.trim()
@@ -186,6 +188,8 @@ export default function Products() {
         throw Error('Заповніть назву та значення кожної характеристики.');
       if (new Set(rows.map(row => row.name.trim())).size !== rows.length)
         throw Error('Назви характеристик не повинні повторюватися.');
+      if (rows.some(({ name }) => managedCharacteristics.has(name.trim()) || name.trim().startsWith('source')))
+        throw Error('Оберіть іншу назву характеристики. Бренд, група й лінійка заповнюються окремо.');
       const characteristics = Object.fromEntries(
         rows.map(row => [row.name.trim(), row.value.trim()])
       );
@@ -219,18 +223,31 @@ export default function Products() {
         },
         id
       );
+      if (id) {
+        try {
+          const saved = await getProduct(id);
+          const entries = editableCharacteristics(saved);
+          if (
+            saved.name !== form.name.trim() ||
+            entries.length !== rows.length ||
+            entries.some(([name, value]) => characteristics[name] !== value)
+          ) {
+            setSaveError('Повторне читання з бази показало іншу назву або характеристики. Введені дані залишилися у формі.');
+          } else {
+            edit(saved);
+            setMessage('Зміни збережено. Дані товару оновлено з бази.');
+          }
+        } catch {
+          setSaveError('Зміни збережено. Не вдалося повторно завантажити товар для перевірки.');
+        }
+        await refresh();
+        return;
+      }
       await refresh();
       setForm(defaults);
-      setId(undefined);
-      setMessage(
-        form.isActive
-          ? 'Товар збережено та опубліковано.'
-          : 'Товар збережено як чернетку. Для публікації відкрийте редагування товару й натисніть «Опублікувати на сайті».'
-      );
+      setMessage('Товар збережено як чернетку. Для публікації відкрийте редагування товару й натисніть «Опублікувати на сайті».');
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : 'Помилка збереження.'
-      );
+      setSaveError(error instanceof Error ? error.message : 'Не вдалося зберегти товар.');
     } finally {
       setBusy(false);
     }
@@ -317,7 +334,7 @@ export default function Products() {
   }
   return (
     <>
-      {message && (
+      {message && !id && (
         <p role="status" className={css.status}>
           {message}
         </p>
@@ -492,11 +509,11 @@ export default function Products() {
           title={id ? 'Редагування товару' : 'Новий товар'}
           editing={Boolean(id)}
           busy={busy}
-          message={message}
           onDismiss={() => {
             setId(undefined);
             setForm(defaults);
             setMessage('');
+            setSaveError('');
           }}
         >
           {!categories.length && (
@@ -504,7 +521,18 @@ export default function Products() {
               Спочатку <Link href="/admin/categories">створіть категорію</Link>.
             </p>
           )}
-          <form className={css.form} onSubmit={submit}>
+          <form
+            className={css.form}
+            onSubmit={submit}
+            onInvalidCapture={event => {
+              const control = event.currentTarget.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+                'input:invalid, select:invalid, textarea:invalid'
+              );
+              const label = control?.labels?.[0]?.firstChild?.textContent?.trim();
+              setMessage('');
+              setSaveError(label ? `Перевірте поле «${label}».` : 'Перевірте поле, яке виділив браузер.');
+            }}
+          >
             <fieldset disabled={busy || !categories.length}>
               <label>
                 Категорія
@@ -731,6 +759,8 @@ export default function Products() {
                     onClick={() => {
                       setId(undefined);
                       setForm(defaults);
+                      setMessage('');
+                      setSaveError('');
                     }}
                   >
                     Скасувати
@@ -738,6 +768,8 @@ export default function Products() {
                 )}
               </div>
             </fieldset>
+            {saveError && <p className={css.error} role="alert">{saveError}</p>}
+            {message && id && <p className={css.status} role="status">{message}</p>}
           </form>
           {id && (
             <div

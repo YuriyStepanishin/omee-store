@@ -57,6 +57,8 @@ export const getProducts = async (params: {
       params: { ...params, limit: 20 },
     })
   ).data;
+export const getProduct = async (id: string) =>
+  (await http.get<AdminProduct>('/admin/products/' + id)).data;
 export const saveProduct = (data: ProductInput, id?: string) =>
   id ? http.put('/products/' + id, data) : http.post('/products', data);
 export const archiveProduct = (id: string) => http.delete('/products/' + id);
