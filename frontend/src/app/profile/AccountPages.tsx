@@ -60,12 +60,15 @@ export function Wishlist() {
   const {addToCart}=useCart();
   const client=useQueryClient();
   const query=useQuery({queryKey:['favorites',user?.id,'page',page],enabled:Boolean(user),queryFn:()=>fetchFavorites(page)});
-  function add(product:Product){addToCart(product.id);setAdded(product.id);}
+  function add(product: Product, sourceProductId = product.id) {
+    addToCart(sourceProductId);
+    setAdded(product.id);
+  }
   return <Account title="Список бажань">
     {query.isPending&&<p role="status">Завантажуємо список…</p>}
     {query.isError&&<p role="alert" className={css.error}>{query.error.message}</p>}
-    {query.data&&<>{query.data.items.length===0&&<p>Список порожній. Натисніть сердечко біля товару, щоб зберегти його тут.</p>}<ul className={css.grid}>{query.data.items.map(product=><ProductCard key={product.id} product={product} busy={false} added={added===product.id} onAdd={()=>add(product)} onOpen={()=>setSelected(product)}/>)}</ul><Pagination page={page} setPage={setPage} next={query.data.items.length===20} busy={query.isFetching}/></>}
+    {query.data&&<>{query.data.items.length===0&&<p>Список порожній. Натисніть сердечко біля товару, щоб зберегти його тут.</p>}<ul className={css.grid}>{query.data.items.map(product=><ProductCard key={product.id} product={product} busy={false} added={added===product.id} onAdd={sourceProductId=>add(product,sourceProductId)} onOpen={()=>setSelected(product)}/>)}</ul><Pagination page={page} setPage={setPage} next={query.data.items.length===20} busy={query.isFetching}/></>}
     <button className={css.button} onClick={()=>{void client.invalidateQueries({queryKey:['favorites',user?.id]});}}>Оновити список</button>
-    {selected&&<ProductModal product={selected} busy={false} added={added===selected.id} onAdd={()=>add(selected)} onClose={()=>setSelected(null)}/>}
+    {selected&&<ProductModal product={selected} busy={false} added={added===selected.id} onAdd={sourceProductId=>add(selected,sourceProductId)} onClose={()=>setSelected(null)}/>}
   </Account>;
 }

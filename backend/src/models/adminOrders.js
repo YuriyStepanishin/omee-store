@@ -5,6 +5,24 @@ const columns = `id,status,total,delivery_method AS "deliveryMethod",payment_met
   payment_status AS "paymentStatus",tracking_number AS "trackingNumber",comment,customer_name AS "customerName",
   customer_phone AS "customerPhone",customer_email AS "customerEmail",city,address,created_at AS "createdAt",updated_at::text AS "updatedAt"`;
 const trackableCarriers = new Set(['nova_poshta', 'ukrposhta', 'meest']);
+const deletableStatuses = new Set(['NEW', 'PROCESSING', 'PACKED', 'CANCELED']);
+const statusFilter = `($1::text IS NULL OR status=$1 OR ($1='PROCESSING' AND status='PAID'))`;
+
+async function returnInventory(client, id) {
+  // Acquire product locks in the same order as checkout.
+  await client.query(
+    'SELECT id FROM products WHERE id IN (SELECT product_id FROM order_items WHERE order_id=$1) ORDER BY id FOR UPDATE',
+    [id]
+  );
+  await client.query(
+    'UPDATE product_variants v SET stock=v.stock+i.quantity FROM order_items i WHERE i.order_id=$1 AND v.source_product_id=i.product_id',
+    [id]
+  );
+  await client.query(
+    'UPDATE products p SET stock=p.stock+i.quantity FROM order_items i WHERE i.order_id=$1 AND p.id=i.product_id',
+    [id]
+  );
+}
 export function adminOrders(pool) {
   return {
     async list({ page, status }) {
@@ -12,13 +30,13 @@ export function adminOrders(pool) {
       const total = Number(
         (
           await pool.query(
-            'SELECT count(*) FROM orders WHERE ($1::text IS NULL OR status=$1)',
+            `SELECT count(*) FROM orders WHERE ${statusFilter}`,
             values
           )
         ).rows[0].count
       );
       const { rows } = await pool.query(
-        `SELECT ${columns} FROM orders WHERE ($1::text IS NULL OR status=$1) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2`,
+        `SELECT ${columns} FROM orders WHERE ${statusFilter} ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2`,
         [...values, (page - 1) * 20]
       );
       return { items: rows, total, page, limit: 20 };
@@ -64,7 +82,7 @@ export function adminOrders(pool) {
         if (statusChanged && ((data.status === 'READY_FOR_PICKUP' && !pickup) || (data.status === 'SHIPPED' && pickup))) {
           throw fail('Цей статус не відповідає способу отримання.');
         }
-        if (statusChanged && data.status === 'SHIPPED' && trackable && !tracking && data.trackingNumber !== undefined) {
+        if (statusChanged && data.status === 'SHIPPED' && trackable && !tracking) {
           throw fail('Вкажіть номер відправлення перед передачею перевізнику.', 400);
         }
         if (order.status === 'CANCELED' || (order.status === 'DELIVERED' && (
@@ -75,21 +93,9 @@ export function adminOrders(pool) {
         ))) {
           throw fail('Після завершення можна змінити лише стан оплати отриманого замовлення.');
         }
-        const payment = data.paymentStatus ?? (data.status === 'PAID' && statusChanged ? 'PAID' : null);
+        const payment = data.paymentStatus ?? null;
         if (data.status === 'CANCELED' && order.status !== 'CANCELED') {
-          // Same product lock order as checkout; stock is returned only once.
-          await client.query(
-            'SELECT id FROM products WHERE id IN (SELECT product_id FROM order_items WHERE order_id=$1) ORDER BY id FOR UPDATE',
-            [id]
-          );
-          await client.query(
-            'UPDATE product_variants v SET stock=v.stock+i.quantity FROM order_items i WHERE i.order_id=$1 AND v.source_product_id=i.product_id',
-            [id]
-          );
-          await client.query(
-            'UPDATE products p SET stock=p.stock+i.quantity FROM order_items i WHERE i.order_id=$1 AND p.id=i.product_id',
-            [id]
-          );
+          await returnInventory(client, id);
         }
         await client.query(
           `UPDATE orders SET status=$2,comment=$3,city=$4,address=$5,
@@ -98,6 +104,31 @@ export function adminOrders(pool) {
           [id, data.status, data.comment, data.city, data.address, payment,
             data.paymentMethod ?? null, data.trackingNumber !== undefined, data.trackingNumber ?? null]
         );
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async remove(id, expectedUpdatedAt) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const { rows: [order] } = await client.query(
+          'SELECT status,payment_status,tracking_number,updated_at::text AS "updatedAt" FROM orders WHERE id=$1 FOR UPDATE',
+          [id]
+        );
+        if (!order) throw fail('Замовлення не знайдено.', 404);
+        if (order.updatedAt !== expectedUpdatedAt) {
+          throw fail('Замовлення змінилось. Оновіть картку перед видаленням.');
+        }
+        if (!deletableStatuses.has(order.status) || order.payment_status !== 'UNCONFIRMED' || order.tracking_number) {
+          throw fail('Видалити можна лише неоплачене замовлення без номера відправлення до передачі або після скасування.');
+        }
+        if (order.status !== 'CANCELED') await returnInventory(client, id);
+        await client.query('DELETE FROM orders WHERE id=$1', [id]);
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK');

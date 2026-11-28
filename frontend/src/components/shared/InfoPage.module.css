@@ -7,11 +7,25 @@
 @media(max-width:767px){.page{width:calc(100% - 32px);margin-block:32px 48px;}}
 .carriers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:28px 0;}
 .carrier{padding:20px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-soft);}
-.carrier h2{font-size:18px;margin:14px 0 12px;}
-.carrier p{font-size:13px;line-height:1.7;margin-bottom:12px;}
-.carrierBadge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:44px;padding:0 10px;border-radius:10px;background:#df352b;color:#fff;font-weight:700;}
-.carrierBadge[data-carrier='ukrposhta']{background:#ffd335;color:#302b20;}
-.carrierBadge[data-carrier='meest']{background:#1452a0;}
+.carrier p {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+}
+.carrierLogoPanel {
+  display: grid;
+  place-items: center;
+  height: 74px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+}
+.carrierLogoPanel .carrierLogo {
+  width: min(100%, 176px);
+  height: 50px;
+  object-fit: contain;
+}
 @media(min-width:768px) and (max-width:1199px){.carriers{gap:12px;}.carrier{padding:16px;}}
 @media(max-width:767px){.carriers{grid-template-columns:1fr;}.carrier{padding:16px;}}
 

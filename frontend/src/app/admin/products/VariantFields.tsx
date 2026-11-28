@@ -34,13 +34,13 @@ export function variantForm(key: string, variant?: ProductVariant): VariantForm 
   };
 }
 
-export default function VariantFields({
-  variants,
-  onChange,
-}: {
+type VariantFieldsProps = {
   variants: VariantForm[];
+  editing: boolean;
   onChange: (variants: VariantForm[]) => void;
-}) {
+};
+
+export default function VariantFields({ variants, editing, onChange }: VariantFieldsProps) {
   const heading = useId();
   function update(index: number, values: Partial<VariantForm>) {
     onChange(variants.map((row, i) => i === index ? { ...row, ...values } : row));
@@ -69,21 +69,16 @@ export default function VariantFields({
             <input type="number" min="0" max="9999999999.99" step="0.01"
               value={variant.price} onChange={e => update(index, { price: e.target.value })} />
           </label>
-          <label>Стара ціна, грн
-            <input type="number" min="0" max="9999999999.99" step="0.01"
-              value={variant.oldPrice} onChange={e => update(index, { oldPrice: e.target.value })} />
-          </label>
-          <label>Артикул
-            <input required maxLength={100} value={variant.sku} onChange={e => update(index, { sku: e.target.value })} />
-          </label>
           <label>Залишок, шт.
             <input type="number" min="0" max="1000000" step="1"
               value={variant.stock} onChange={e => update(index, { stock: e.target.value })} />
           </label>
-          <label className={css.check}>
-            <input type="checkbox" checked={variant.isActive} onChange={e => update(index, { isActive: e.target.checked })} />
-            Показувати фасування
-          </label>
+          {editing && (
+            <label className={css.check}>
+              <input type="checkbox" checked={variant.isActive} onChange={e => update(index, { isActive: e.target.checked })} />
+              Показувати фасування
+            </label>
+          )}
           {index > 0 && !variant.id && (
             <button type="button" className={css.button} onClick={() => onChange(variants.filter((_, i) => i !== index))}>Прибрати</button>
           )}
@@ -92,5 +87,34 @@ export default function VariantFields({
       <button type="button" className={css.button} disabled={variants.length >= 40}
         onClick={() => onChange([...variants, variantForm(crypto.randomUUID())])}>Додати фасування</button>
     </section>
+  );
+}
+
+export function VariantExtraFields({ variants, editing, onChange }: VariantFieldsProps) {
+  function update(key: string, values: Partial<VariantForm>) {
+    onChange(variants.map(row => row.key === key ? { ...row, ...values } : row));
+  }
+
+  return (
+    <div className={css.variantList}>
+      {variants.map((variant, index) => (
+        <fieldset className={css.variantEditor} key={variant.key}>
+          <legend>{index === 0 ? 'Основне фасування' : `Фасування ${index + 1}`}</legend>
+          <label>Стара ціна, грн
+            <input type="number" min="0" max="9999999999.99" step="0.01"
+              value={variant.oldPrice} onChange={e => update(variant.key, { oldPrice: e.target.value })} />
+          </label>
+          <label>Артикул
+            <input
+              required={Boolean(variant.id) || (editing && index === 0)}
+              maxLength={100}
+              placeholder="Автоматично при збереженні"
+              value={variant.sku}
+              onChange={e => update(variant.key, { sku: e.target.value })}
+            />
+          </label>
+        </fieldset>
+      ))}
+    </div>
   );
 }

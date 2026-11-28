@@ -5,6 +5,7 @@ import { validate, validateId } from '../validators/catalog.js';
 import {
   orderListSchema,
   orderUpdateSchema,
+  orderDeleteSchema,
   articleSchema,
 } from '../validators/admin.js';
 import { adminOrders } from '../models/adminOrders.js';
@@ -55,6 +56,11 @@ export function adminRoutes(config) {
     );
     res.status(204).end();
   });
+  router.delete('/admin/orders/:id', async (req, res) => {
+    const { expectedUpdatedAt } = validate(orderDeleteSchema, req.query);
+    await orders().remove(validateId(req.params.id), expectedUpdatedAt);
+    res.status(204).end();
+  });
   router.get('/admin/articles', async (req, res) =>
     res.json(await articles().list())
   );
@@ -74,6 +80,12 @@ export function adminRoutes(config) {
       )
     )
   );
+  router.patch('/admin/articles/:id/publication', async (req, res) => {
+    const status = req.body?.status;
+    if (status !== 'draft' && status !== 'published')
+      return res.status(400).json({ message: 'Оберіть статус публікації.' });
+    res.json(await articles().setPublication(validateId(req.params.id), status));
+  });
   router.delete('/admin/articles/:id', async (req, res) => {
     await articles().remove(validateId(req.params.id));
     res.status(204).end();

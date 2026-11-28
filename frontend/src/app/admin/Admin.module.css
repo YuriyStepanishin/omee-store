@@ -246,23 +246,15 @@
 .row {
   display: flow-root;
 }
-.lineSelect {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 13px;
+.productPublicationStatus {
   color: var(--color-muted);
-  margin-top: 8px;
+  font-size: 13px;
 }
-.lineSelect select {
-  min-height: 40px;
-  max-width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text);
+.productPublicationStatus[data-published='true'] {
+  color: var(--color-primary);
+}
+.publishBox.productPublicationActions {
+  margin-block: 16px 0;
 }
 .danger {
   color: var(--color-error);
@@ -511,6 +503,23 @@
 
 .variantList > button {
   justify-self: start;
+}
+
+.productExtras {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.productExtras summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.productExtraFields {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
 }
 
 .form .orderSection{border:1px solid var(--color-border);border-radius:12px;padding:12px;}

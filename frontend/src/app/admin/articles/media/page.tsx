@@ -1,2 +1,5 @@
-import ContentEditor from '../../content/ContentEditor';
-export default function JournalMediaPage() { return <ContentEditor mediaOnly/>; }
+import JournalEditor from '../JournalEditor';
+
+export default function JournalMediaPage() {
+  return <JournalEditor section="media" />;
+}

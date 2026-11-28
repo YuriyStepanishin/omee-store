@@ -12,6 +12,7 @@ const variantFields = {
 const validOldPrice = value => value.oldPrice === null || value.oldPrice >= value.price;
 const oldPriceError = { message: 'Стара ціна не може бути нижчою за поточну.', path: ['oldPrice'] };
 const sizeUnits = ['ml', 'l', 'g', 'kg'];
+const productAudience = z.enum(['hair', 'body', 'other']);
 const variantSchema = z.object({
   id: z.string().uuid().optional(),
   volume: z.number().positive().max(1_000_000).nullable(),
@@ -31,6 +32,7 @@ export const productBadgeSchema=z.object({
 export const productSchema = z.object({
   categoryId: z.string().uuid(),
   brandId: z.string().uuid().nullable().optional(),
+  audience: productAudience.optional(),
   name: z.string().trim().min(2).max(240),
   slug,
   description: z.string().max(12000).default(''),
@@ -65,7 +67,11 @@ export const productSchema = z.object({
   }
 });
 export const listSchema=z.object({page:z.coerce.number().int().min(1).max(100000).default(1),limit:z.coerce.number().int().min(1).max(100).default(20),q:z.string().trim().max(200).default(''),category:z.string().uuid().optional(),sort:z.enum(['newest','price_asc','price_desc','name']).default('newest')});
+export const adminProductListSchema = listSchema.extend({
+  brand: z.string().uuid().optional(),
+  status: z.enum(['published', 'unpublished']).optional(),
+});
 export function validate(schema,value){const result=schema.safeParse(value);if(!result.success)throw Object.assign(new Error(result.error.issues[0]?.message||'Перевірте введені дані.'),{status:400});return result.data;}
 export function validateId(id){return validate(z.string().uuid(),id);}
 
-export const audienceSchema=z.object({audience:z.enum(['hair','body','other'])}).strict();
+export const audienceSchema=z.object({audience:productAudience}).strict();

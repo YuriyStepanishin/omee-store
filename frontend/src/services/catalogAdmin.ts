@@ -1,4 +1,5 @@
 import type { ProductBadge, ProductVariant } from '@/types/store';
+import type { ProductLine } from '@/constants/productLines';
 import { http } from './http';
 import { uploadToCloudinary } from './cloudinaryUpload';
 export interface Category {
@@ -9,6 +10,7 @@ export interface Category {
   isActive: boolean;
 }
 export interface ProductInput {
+  audience?: ProductLine;
   brandId?: string | null;
   categoryId: string;
   name: string;
@@ -30,7 +32,6 @@ export interface AdminProduct extends ProductInput {
   categoryName: string;
   categorySlug?: string;
   brand?: string;
-  audience?: 'hair' | 'body' | 'other';
 }
 export interface ProductList {
   items: AdminProduct[];
@@ -38,6 +39,7 @@ export interface ProductList {
   page: number;
   limit: number;
 }
+export type ProductPublicationStatus = 'published' | 'unpublished';
 export const getCategories = async () =>
   (await http.get<Category[]>('/admin/categories')).data;
 export const saveCategory = async (data: Omit<Category, 'id'>, id?: string) =>
@@ -47,6 +49,8 @@ export const getProducts = async (params: {
   page: number;
   q: string;
   category?: string;
+  brand?: string;
+  status?: ProductPublicationStatus;
 }) =>
   (
     await http.get<ProductList>('/admin/products', {
@@ -60,22 +64,8 @@ export async function uploadPhoto(file: File) {
   return uploadToCloudinary(file, 'image');
 }
 
-export const saveProductLine = (
-  id: string,
-  audience: 'hair' | 'body' | 'other'
-) => http.put('/products/' + id + '/line', { audience });
-
 export const deleteProduct = (id: string) =>
   http.delete('/admin/products/' + id);
-
-export const classifyCatalogProducts = async () =>
-  (
-    await http.post<{
-      categories: { created: number; existing: number; assigned: number; unassigned: number };
-      classified: number;
-      review: Array<{ id: string; name: string }>;
-    }>('/admin/products/classify', {}, { timeout: 60000 })
-  ).data;
 
 export const getBrands = async () => (await http.get<Category[]>('/admin/brands')).data;
 export const saveBrand = (data: Omit<Category, 'id'>, id?: string) => id ? http.put('/admin/brands/' + id, data) : http.post('/admin/brands', data);

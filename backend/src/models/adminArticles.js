@@ -47,6 +47,18 @@ export function adminArticles(pool) {
         throw Object.assign(new Error('Статтю не знайдено.'), { status: 404 });
       return row;
     },
+    async setPublication(id, status) {
+      const { rows } = await pool.query(
+        `UPDATE public.blog_posts
+         SET status=$2, updated_at=now(),
+             published_at=CASE WHEN $2='published' THEN COALESCE(published_at,now()) ELSE published_at END
+         WHERE id=$1 RETURNING id,status`,
+        [id, status]
+      );
+      if (!rows[0])
+        throw Object.assign(new Error('Статтю не знайдено.'), { status: 404 });
+      return rows[0];
+    },
     async remove(id) {
       const result = await pool.query(
         'DELETE FROM public.blog_posts WHERE id=$1 RETURNING id',

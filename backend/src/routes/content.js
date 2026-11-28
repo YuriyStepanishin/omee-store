@@ -15,6 +15,15 @@ export function contentRoutes(config){
   res.json(await importHairMedia(getPool(config.databaseUrl)));
  });
  router.get('/admin/content',async(req,res)=>res.json(await repo().adminContent()));
+ router.patch('/admin/content/media/:id/publication',async(req,res)=>{
+  const isActive=req.body?.isActive;
+  if(typeof isActive!=='boolean')return res.status(400).json({message:'Оберіть статус публікації.'});
+  res.json(await repo().setMediaPublication(validateId(req.params.id),isActive));
+ });
+ router.delete('/admin/content/media/:id',async(req,res)=>{
+  await repo().removeMedia(validateId(req.params.id));
+  res.status(204).end();
+ });
  router.put('/admin/content/info',async(req,res)=>{
   await repo().saveInfo(validate(infoSchema,req.body));res.status(204).end();
  });

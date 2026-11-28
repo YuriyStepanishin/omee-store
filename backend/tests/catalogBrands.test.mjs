@@ -8,9 +8,31 @@ import {catalogDetails} from '../src/models/catalogDetails.js';
 import {createApp} from '../src/app.js';
 import {getPool,closePool} from '../src/config/db.js';
 import {signSession} from '../src/services/tokens.js';
+import {adminProductListSchema, listSchema} from '../src/validators/catalog.js';
 const productId='11111111-1111-4111-8111-111111111111';
 const categoryId='22222222-2222-4222-8222-222222222222';
 const brandId='33333333-3333-4333-8333-333333333333';
+
+test('admin brand and publication filters apply to both the count and the paginated rows', async () => {
+ const calls = [];
+ const repo = catalogRepository({async query(sql, params) {
+  calls.push({sql, params});
+  return {rows: sql.startsWith('SELECT count') ? [{count: '23'}] : []};
+ }});
+ const query = adminProductListSchema.parse({page: '2', q: 'Redken', category: categoryId, brand: brandId, status: 'unpublished'});
+ const result = await repo.products(query, true);
+ assert.equal(result.total, 23);
+ assert.equal(result.page, 2);
+ for (const {sql} of calls) assert.match(sql, /p\.category_id=\$2 AND p\.brand_id=\$3 AND p\.is_active=\$4/);
+ assert.deepEqual(calls[0].params, ['%Redken%', categoryId, brandId, false]);
+ assert.deepEqual(calls[1].params, ['%Redken%', categoryId, brandId, false, 20, 20]);
+ const published = adminProductListSchema.parse({status: 'published'});
+ await repo.products(published, true);
+ assert.deepEqual(calls[2].params, [true]);
+ assert.equal(adminProductListSchema.safeParse({status: 'invalid'}).success, false);
+ assert.equal(adminProductListSchema.safeParse({brand: 'invalid'}).success, false);
+ assert.equal(listSchema.parse({status: 'unpublished'}).status, undefined);
+});
 
 test('brands use their own table and category edits cannot target legacy brand entries',async()=>{
  const calls=[];const repo=catalogDictionaries({async query(sql,args){calls.push({sql,args});return {rows:[{id:brandId}],rowCount:1};}});

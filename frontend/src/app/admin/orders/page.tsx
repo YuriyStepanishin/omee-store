@@ -5,6 +5,7 @@ import {
   getOrders,
   getOrder,
   updateOrder,
+  deleteOrder,
   orderTransitions,
   type OrderDetail,
 } from '@/services/admin';
@@ -17,6 +18,7 @@ import css from '../Admin.module.css';
 import EditPanel from '../EditPanel';
 const money = (n: string | number) =>
   Number(n).toLocaleString('uk-UA', { style: 'currency', currency: 'UAH' });
+const deletableStatuses: ReadonlySet<OrderStatus> = new Set(['NEW', 'PROCESSING', 'PACKED', 'CANCELED']);
 export default function Orders() {
   const client = useQueryClient();
   const [page, setPage] = useState(1);
@@ -50,6 +52,7 @@ export default function Orders() {
     if (busy) return;
     setBusy(true);
     setMessage('');
+    setFailed(false);
     try {
       fill(await getOrder(id));
     } catch (e) {
@@ -57,6 +60,42 @@ export default function Orders() {
       setMessage(
         e instanceof Error ? e.message : 'Не вдалося відкрити замовлення.'
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function refreshOrders() {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ['admin', 'orders'] }),
+      client.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+      client.invalidateQueries({ queryKey: ['admin', 'customers'] }),
+      client.invalidateQueries({ queryKey: ['my-orders'] }),
+      client.invalidateQueries({ queryKey: ['loyalty'] }),
+      client.invalidateQueries({ queryKey: ['admin', 'products'] }),
+      client.invalidateQueries({ queryKey: ['catalog'] }),
+      client.invalidateQueries({ queryKey: ['cart-products'] }),
+    ]);
+  }
+
+  const canDelete = selected && deletableStatuses.has(selected.status) &&
+    selected.paymentStatus === 'UNCONFIRMED' && !selected.trackingNumber;
+
+  async function remove() {
+    if (!selected || !canDelete || busy) return;
+    const inventoryNotice = selected.status === 'CANCELED' ? '' : ' Товари повернуться в залишки.';
+    if (!window.confirm(`Видалити замовлення №${selected.id.slice(0, 8)} з бази даних назавжди?${inventoryNotice}`)) return;
+    setBusy(true);
+    setFailed(false);
+    setMessage('');
+    try {
+      await deleteOrder(selected.id, selected.updatedAt);
+      setSelected(null);
+      if (page > 1 && data?.items.length === 1 && data.items[0].id === selected.id) setPage(page - 1);
+      await refreshOrders();
+      setMessage('Замовлення видалено з Бази Даних.');
+    } catch (e) {
+      setFailed(true);
+      setMessage(e instanceof Error ? e.message : 'Не вдалося видалити замовлення.');
     } finally {
       setBusy(false);
     }
@@ -84,13 +123,7 @@ export default function Orders() {
         city,
         address,
       });
-      await Promise.all([
-        client.invalidateQueries({ queryKey: ['admin', 'orders'] }),
-        client.invalidateQueries({ queryKey: ['admin', 'overview'] }),
-        client.invalidateQueries({ queryKey: ['my-orders'] }),
-        client.invalidateQueries({ queryKey: ['admin', 'products'] }),
-        client.invalidateQueries({ queryKey: ['catalog'] }),
-      ]);
+      await refreshOrders();
       fill(await getOrder(selected.id));
       setMessage('Замовлення оновлено.');
     } catch (e) {
@@ -128,7 +161,7 @@ export default function Orders() {
               }}
             >
               <option value="">Усі статуси</option>
-              {Object.entries(statusLabels).map(([key, label]) => (
+              {Object.entries(statusLabels).filter(([key]) => key !== 'PAID').map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
                 </option>
@@ -164,7 +197,7 @@ export default function Orders() {
                   {new Date(o.createdAt).toLocaleString('uk-UA', {
                     timeZone: 'Europe/Kyiv',
                   })}{' '}
-                  · {orderStatusLabel(o.status, o.deliveryMethod)} · {paymentStatusLabels[o.paymentStatus]}
+                  · {orderStatusLabel(o.status, o.deliveryMethod)} · Оплата: {paymentStatusLabels[o.paymentStatus]}
                 </p>
                 <p>
                   {o.customerPhone} · {o.city}
@@ -340,13 +373,16 @@ export default function Orders() {
                   </button>
                 )}
               </form>
-              <button
-                className={css.button}
-                disabled={busy}
-                onClick={() => void open(selected.id)}
-              >
-                Оновити картку
-              </button>
+              <div className={css.actions}>
+                <button type="button" className={css.button} disabled={busy} onClick={() => void open(selected.id)}>
+                  Оновити картку
+                </button>
+                {canDelete && (
+                  <button type="button" className={`${css.button} ${css.danger}`} disabled={busy} onClick={() => void remove()}>
+                    Видалити з Бази Даних
+                  </button>
+                )}
+              </div>
             </>
           )}
         </EditPanel>

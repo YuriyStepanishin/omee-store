@@ -55,3 +55,6 @@ export const saveContent = (
 export async function uploadVideo(file: File) {
   return uploadToCloudinary(file, 'video');
 }
+export const setMediaPublication = (id: string, isActive: boolean) =>
+  http.patch('/admin/content/media/' + id + '/publication', { isActive });
+export const deleteMedia = (id: string) => http.delete('/admin/content/media/' + id);

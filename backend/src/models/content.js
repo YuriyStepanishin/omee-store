@@ -21,10 +21,12 @@ export function contentRepository(pool) {
   return {
     async publicInfo() {
       try {
-        const result=await pool.query("SELECT value FROM site_settings WHERE key='info'");
+        const result = await pool.query(
+          "SELECT value FROM site_settings WHERE key='info'"
+        );
         return siteInfo(result.rows[0]?.value);
-      } catch(error) {
-        if(error.code==='42P01')return infoDefault;
+      } catch (error) {
+        if (error.code === '42P01') return infoDefault;
         throw error;
       }
     },
@@ -94,6 +96,18 @@ export function contentRepository(pool) {
       );
       if (!rows[0]) throw missing();
       return rows[0];
+    },
+    async setMediaPublication(id, isActive) {
+      const { rows } = await pool.query(
+        'UPDATE site_media SET is_active=$2 WHERE id=$1 RETURNING id',
+        [id, isActive]
+      );
+      if (!rows[0]) throw missing();
+      return rows[0];
+    },
+    async removeMedia(id) {
+      const { rows } = await pool.query('DELETE FROM site_media WHERE id=$1 RETURNING id', [id]);
+      if (!rows[0]) throw missing();
     },
     async saveBanner(data, id) {
       const values = [data.title, data.imageUrl, data.link, data.isActive];

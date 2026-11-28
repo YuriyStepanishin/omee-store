@@ -67,6 +67,8 @@ export const updateOrder = (
     address: string;
   }
 ) => http.put('/admin/orders/' + id, data);
+export const deleteOrder = (id: string, expectedUpdatedAt: string) =>
+  http.delete('/admin/orders/' + id, { params: { expectedUpdatedAt } });
 export interface ArticleInput {
   slug: string;
   title: string;
@@ -97,3 +99,5 @@ export const saveArticle = (data: ArticleInput, id?: string) =>
     : http.post('/admin/articles', data);
 export const deleteArticle = (id: string) =>
   http.delete('/admin/articles/' + id);
+export const setArticlePublication = (id: string, status: ArticleInput['status']) =>
+  http.patch('/admin/articles/' + id + '/publication', { status });

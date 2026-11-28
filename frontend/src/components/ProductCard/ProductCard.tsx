@@ -6,7 +6,8 @@ import ProductPhoto from '../ProductPhoto/ProductPhoto';
 import css from './ProductCard.module.css';
 import FavoriteButton from './FavoriteButton';
 import ProductBadges from '../ProductBadges/ProductBadges';
-import {availableVariants, packagingLabel, withPackaging} from './productPackaging';
+import PackagingOptions from './PackagingOptions';
+import {availableVariants, withPackaging} from './productPackaging';
 const money = (value: number) =>
   new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(
     value
@@ -98,7 +99,7 @@ export default function ProductCard({
     <li
       className={css.card}
       onClick={event => {
-        if (!(event.target as HTMLElement).closest('button,a,input,select,label'))
+        if (!(event.target as HTMLElement).closest('button,a,input,select,label,[role="group"]'))
           onOpen();
       }}
     >
@@ -130,17 +131,11 @@ export default function ProductCard({
       </h3>
       <p className={css.description}>{p.description}</p>
       <div className={css.bottom}>
-        {variants.length > 1 ? (
-          <label className={css.packaging}>
-            Фасування
-            <select aria-label={`Фасування: ${p.title}`} value={variant?.sourceProductId ?? ''}
-              onChange={event => setSourceId(event.target.value)}>
-              {variants.map(option => (
-                <option key={option.id} value={option.sourceProductId}>{packagingLabel(option)}</option>
-              ))}
-            </select>
-          </label>
-        ) : variant?.volume != null && <p className={css.packaging}>{packagingLabel(variant)}</p>}
+        <PackagingOptions
+          variants={variants}
+          selected={variant}
+          onSelect={option => setSourceId(option.sourceProductId)}
+        />
         <ProductPrice product={shown} />
         <CartButton
           product={p.variants?.length && !variant ? {...shown, stock: 0} : shown}

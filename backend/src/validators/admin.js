@@ -11,8 +11,8 @@ export const orderStatuses = [
 ];
 export const orderTransitions = {
   NEW: ['PROCESSING', 'CANCELED'],
-  PROCESSING: ['PAID', 'PACKED', 'SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
-  PAID: ['PROCESSING', 'PACKED', 'SHIPPED', 'READY_FOR_PICKUP'],
+  PROCESSING: ['PACKED', 'SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
+  PAID: ['PACKED', 'SHIPPED', 'READY_FOR_PICKUP'],
   PACKED: ['SHIPPED', 'READY_FOR_PICKUP', 'CANCELED'],
   SHIPPED: ['DELIVERED'],
   READY_FOR_PICKUP: ['DELIVERED', 'CANCELED'],
@@ -23,6 +23,7 @@ export const orderListSchema = z.object({
   page: z.coerce.number().int().min(1).max(100000).default(1),
   status: z.enum(orderStatuses).optional(),
 });
+export const orderDeleteSchema = z.object({ expectedUpdatedAt: z.string().min(1).max(80) });
 export const orderUpdateSchema = z
   .object({
     status: z.enum(orderStatuses),

@@ -10,14 +10,50 @@ export function catalogRepository(pool){
   async categories(admin=false){return catalogDictionaries(pool).list('categories',admin);},
   async saveCategory(data,id){return catalogDictionaries(pool).save('categories',data,id);},
   async archiveCategory(id){return catalogDictionaries(pool).archive('categories',id);},
-  async products(query,admin=false){const params=[];const where=[];if(!admin)where.push('p.is_active AND c.is_active');where.push(canonicalProduct);if(query.q){params.push('%'+query.q.replace(/[\\%_]/g,'\\$&')+'%');where.push(`(p.name ILIKE $${params.length} OR p.sku ILIKE $${params.length} OR EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.sku ILIKE $${params.length}))`);}if(query.category){params.push(query.category);where.push(`p.category_id=$${params.length}`);}const filter=where.length?' WHERE '+where.join(' AND '):'';const count=await pool.query('SELECT count(*) AS count FROM products p JOIN categories c ON c.id=p.category_id'+filter,params);const sort={newest:'p.created_at DESC,p.id',price_asc:'p.price,p.id',price_desc:'p.price DESC,p.id',name:'p.name,p.id'}[query.sort];const values=[...params,query.limit,(query.page-1)*query.limit];const {rows}=await pool.query(productSelect+filter+` ORDER BY ${sort} LIMIT $${values.length-1} OFFSET $${values.length}`,values);return {items:rows.map(mapProduct),total:Number(count.rows[0].count),page:query.page,limit:query.limit};},
+  async products(query, admin = false) {
+    const params = [];
+    const where = [canonicalProduct];
+    if (!admin) where.push('p.is_active AND c.is_active');
+    if (query.q) {
+      params.push('%' + query.q.replace(/[\\%_]/g, '\\$&') + '%');
+      const search = '$' + params.length;
+      where.push(`(p.name ILIKE ${search} OR p.sku ILIKE ${search} OR EXISTS (
+        SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.sku ILIKE ${search}
+      ))`);
+    }
+    if (query.category) {
+      params.push(query.category);
+      where.push(`p.category_id=$${params.length}`);
+    }
+    if (admin && query.brand) {
+      params.push(query.brand);
+      where.push(`p.brand_id=$${params.length}`);
+    }
+    if (admin && query.status) {
+      params.push(query.status === 'published');
+      where.push(`p.is_active=$${params.length}`);
+    }
+    const filter = ' WHERE ' + where.join(' AND ');
+    const count = await pool.query(
+      'SELECT count(*) AS count FROM products p JOIN categories c ON c.id=p.category_id' + filter,
+      params
+    );
+    const sort = {newest:'p.created_at DESC,p.id',price_asc:'p.price,p.id',price_desc:'p.price DESC,p.id',name:'p.name,p.id'}[query.sort];
+    const values = [...params, query.limit, (query.page - 1) * query.limit];
+    const { rows } = await pool.query(
+      productSelect + filter + ` ORDER BY ${sort} LIMIT $${values.length - 1} OFFSET $${values.length}`,
+      values
+    );
+    return {items:rows.map(mapProduct),total:Number(count.rows[0].count),page:query.page,limit:query.limit};
+  },
   async product(id,admin=false){const {rows}=await pool.query(productSelect+' WHERE p.id=$1 AND '+canonicalProduct+(admin?'':' AND p.is_active AND c.is_active'),[id]);if(!rows[0])throw notFound();return mapProduct(rows[0]);},
   async saveProduct(data,id){const client=await pool.connect();try{await client.query('BEGIN');
 const category=(await client.query('SELECT id,name,slug FROM categories WHERE id=$1',[data.categoryId])).rows[0];
 if(!category||/^(import|brand)-/.test(category.slug||''))throw Object.assign(new Error('Оберіть категорію товару, а не бренд.'),{status:400});
 let preserved={};let existingBrandId=null;
-if(id){const current=(await client.query('SELECT characteristics,brand_id FROM products p WHERE id=$1 AND '+canonicalProduct+' FOR UPDATE',[id])).rows[0];if(!current)throw notFound();existingBrandId=current.brand_id||null;preserved=Object.fromEntries(Object.entries(current.characteristics||{}).filter(([key,value])=>key.startsWith('source')||value&&typeof value==='object'));}
+if(id){const current=(await client.query('SELECT characteristics,brand_id FROM products p WHERE id=$1 AND '+canonicalProduct+' FOR UPDATE',[id])).rows[0];if(!current)throw notFound();existingBrandId=current.brand_id||null;preserved=Object.fromEntries(Object.entries(current.characteristics||{}).filter(([key,value])=>key==='Лінійка'||key==='audience'||key.startsWith('source')||value&&typeof value==='object'));}
 const characteristics={...preserved,...data.characteristics};
+if(data.audience) characteristics['Лінійка']=LINE_LABELS[data.audience];
 if(category.name)characteristics.group=category.name;
 const brandId=data.brandId===undefined?existingBrandId:data.brandId;
 if(brandId){const brand=(await client.query("SELECT id,name FROM brands WHERE id=$1",[brandId])).rows[0];if(!brand)throw Object.assign(new Error('Оберіть бренд із довідника.'),{status:400});characteristics.brand=brand.name;delete characteristics.brandId;delete characteristics['Бренд'];delete characteristics.Brand;}
