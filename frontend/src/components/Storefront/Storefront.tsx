@@ -1,5 +1,7 @@
 'use client';
 import HeroCarousel from '@/components/HeroCarousel/HeroCarousel';
+import DeliveryInfo from '@/components/DeliveryInfo/DeliveryInfo';
+import Reviews from '@/components/Reviews/Reviews';
 import MediaPreview from '@/components/MediaPreview/MediaPreview';
 import MediaCredit from '@/components/MediaCredit/MediaCredit';
 import ProductResults from '@/components/ProductResults/ProductResults';
@@ -15,7 +17,7 @@ import Link from 'next/link';
 import { PRODUCT_LINES, type ProductLine } from '@/constants/productLines';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   fetchCatalog,
   fetchCatalogPage,
@@ -48,7 +50,9 @@ function NumberedPagination({
       <span aria-hidden="true">Сторінка</span>
       {pageNumbers(page, pageCount).map((number, index) =>
         number === 'gap' ? (
-          <span key={`gap-${index}`} aria-hidden="true">…</span>
+          <span key={`gap-${index}`} aria-hidden="true">
+            …
+          </span>
         ) : (
           <button
             key={number}
@@ -90,7 +94,6 @@ export default function App() {
   const [search, setSearch] = useState('');
   const desktop = useDesktop();
   const [catalogPage, setCatalogPage] = useState(1);
-  const [shownProducts, setShownProducts] = useState<Product[]>([]);
   const [catalogSort, setCatalogSort] = useState('newest');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   useEffect(() => {
@@ -99,35 +102,58 @@ export default function App() {
   }, [search]);
   useEffect(() => {
     setCatalogPage(1);
-    setShownProducts([]);
   }, [category, brand, line, debouncedSearch, catalogSort]);
-  const catalogFilters = [category, brand, line, debouncedSearch, catalogSort] as const;
-  const pageQuery = useQuery({
-    queryKey: [
-      'catalog',
-      'page',
-      catalogPage,
-      ...catalogFilters,
-    ],
+  const catalogFilters = [
+    category,
+    brand,
+    line,
+    debouncedSearch,
+    catalogSort,
+  ] as const;
+  const catalogParams = {
+    limit: 24,
+    category: category === 'all' ? '' : category,
+    brand: brand === 'all' ? '' : brand,
+    line: line === 'all' ? undefined : line,
+    search: debouncedSearch,
+    sort: catalogSort,
+  };
+  const desktopCatalog = useQuery({
+    queryKey: ['catalog', 'page', catalogPage, ...catalogFilters],
+    enabled: desktop,
     placeholderData: (previous, query) =>
-      desktop && catalogFilters.every((filter, index) => filter === query?.queryKey[index + 3])
+      catalogFilters.every(
+        (filter, index) => filter === query?.queryKey[index + 3]
+      )
         ? previous
         : undefined,
-    queryFn: () =>
-      fetchCatalogPage({
-        page: catalogPage,
-        limit: 24,
-        category: category === 'all' ? '' : category,
-        brand: brand === 'all' ? '' : brand,
-        line: line === 'all' ? undefined : line,
-        search: debouncedSearch,
-        sort: catalogSort,
-      }),
+    queryFn: ({ signal }) => fetchCatalogPage({ ...catalogParams, page: catalogPage }, signal),
     staleTime: 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
     retry: 1,
   });
+  const mobileCatalog = useInfiniteQuery({
+    queryKey: ['catalog', 'page', 'mobile', ...catalogFilters],
+    enabled: !desktop,
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) => fetchCatalogPage({ ...catalogParams, page: pageParam }, signal),
+    getNextPageParam: last => last.page < last.pages ? last.page + 1 : undefined,
+    staleTime: 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    retry: 1,
+  });
+  const pageQuery = desktop ? desktopCatalog : mobileCatalog;
+  const catalogTotal = desktop ? desktopCatalog.data?.total : mobileCatalog.data?.pages[0]?.total;
+  useEffect(() => {
+    if (!desktop || !desktopCatalog.data || desktopCatalog.isPlaceholderData) return;
+    const lastPage = Math.max(1, desktopCatalog.data.pages);
+    if (catalogPage > lastPage) setCatalogPage(lastPage);
+  }, [catalogPage, desktop, desktopCatalog.data, desktopCatalog.isPlaceholderData]);
   const [busy, setBusy] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [startWithReviews, setStartWithReviews] = useState(false);
   const {
     data: fullProduct,
     isPending: productLoading,
@@ -137,6 +163,7 @@ export default function App() {
     queryFn: () => fetchProduct(selectedProduct!.id),
     enabled: Boolean(selectedProduct),
     staleTime: 60 * 1000,
+    refetchOnWindowFocus: 'always',
     retry: 1,
   });
   const [lastAdded, setLastAdded] = useState('');
@@ -183,24 +210,11 @@ export default function App() {
   );
 
   const lineProducts = products;
-  const visible = desktop ? (pageQuery.data?.products ?? []) : shownProducts;
-  useEffect(() => {
-    if (desktop) {
-      setShownProducts([]);
-      return;
-    }
-    if (!pageQuery.data) return;
-    setShownProducts(previous =>
-      catalogPage === 1
-        ? pageQuery.data.products
-        : [
-            ...previous,
-            ...pageQuery.data.products.filter(
-              p => !previous.some(existing => existing.id === p.id)
-            ),
-          ]
-    );
-  }, [desktop, catalogPage, pageQuery.data]);
+  const visible = desktop
+    ? desktopCatalog.data?.products ?? []
+    : [...new Map(mobileCatalog.data?.pages.flatMap(page =>
+        page.products.map(product => [product.id, product] as const)
+      )).values()];
   function addProduct(product: Product, sourceProductId?: string) {
     const variants = availableVariants(product);
     const variant = sourceProductId
@@ -265,7 +279,10 @@ export default function App() {
               role="group"
               aria-label="Лінійка товарів"
             >
-              {[{ id: 'all', label: 'Усі товари' } as const, ...PRODUCT_LINES].map(item => (
+              {[
+                { id: 'all', label: 'Усі товари' } as const,
+                ...PRODUCT_LINES,
+              ].map(item => (
                 <button
                   key={item.id}
                   type="button"
@@ -342,7 +359,7 @@ export default function App() {
               </button>
             </div>
             <p className={cx('catalog-count')} role="status">
-              Знайдено товарів: {pageQuery.data?.total ?? '…'}
+              Знайдено товарів: {catalogTotal ?? '…'}
             </p>
             {pageQuery.isFetching && <p role="status">Завантаження товарів…</p>}
             {pageQuery.isError && (
@@ -372,7 +389,10 @@ export default function App() {
                     busy={busy}
                     added={lastAdded === p.id}
                     onAdd={sourceProductId => addProduct(p, sourceProductId)}
-                    onOpen={() => setSelectedProduct(p)}
+                    onOpen={section => {
+                      setStartWithReviews(section === 'reviews');
+                      setSelectedProduct(p);
+                    }}
                   />
                 )}
               />
@@ -380,24 +400,24 @@ export default function App() {
             {desktop && (
               <NumberedPagination
                 page={catalogPage}
-                pageCount={pageQuery.data?.pages ?? 0}
+                pageCount={desktopCatalog.data?.pages ?? 0}
                 label="Сторінки каталогу"
                 onChange={setCatalogPage}
               />
             )}
-            {!desktop && catalogPage < (pageQuery.data?.pages ?? 0) && (
+            {!desktop && mobileCatalog.hasNextPage && (
               <button
                 type="button"
                 className={cx('btn')}
                 disabled={pageQuery.isFetching}
-                onClick={() => setCatalogPage(p => p + 1)}
+                onClick={() => void mobileCatalog.fetchNextPage()}
               >
                 Показати ще{' '}
                 {Math.min(
                   24,
                   Math.max(
                     0,
-                    (pageQuery.data?.total ?? 0) - shownProducts.length
+                    (catalogTotal ?? 0) - visible.length
                   )
                 )}
               </button>
@@ -408,7 +428,7 @@ export default function App() {
                 <p role="status">
                   {pageQuery.isPending
                     ? 'Завантаження товарів…'
-                    : pageQuery.data?.total === 0 &&
+                    : catalogTotal === 0 &&
                         category === 'all' &&
                         brand === 'all' &&
                         !debouncedSearch
@@ -420,9 +440,11 @@ export default function App() {
         </section>
         <section className={cx('section section--alt')} id="media">
           <div className={cx('container')}>
-            <h2 className={cx('section__title')}>Наш журнал про корисне</h2>
-            <p>Відео, фото та поради з догляду за волоссям.</p>
-            <Link href="/blog">Увесь Журнал</Link>
+            <Link href="/blog" className={cx('journal-title-link')}>
+              <h2 className={cx('section__title')}>Наш журнал про корисне</h2>
+            </Link>
+            <p>Статті, відео, фото та поради з догляду за волоссям.</p>
+
             <ul className={cx('useful-grid')}>
               {visibleUsefulItems.map(entry =>
                 entry.type === 'media' ? (
@@ -500,22 +522,16 @@ export default function App() {
             {aboutTagline && (
               <p className={cx('about__tagline')}>{aboutTagline}</p>
             )}
-            <div id="buyers-info">
-              <h3 className={cx('about__buyers-title')}>Для покупців</h3>
+            <Reviews id="store-reviews" />
+            <div id="buyers-info" className={cx('about__buyers')}>
+              <DeliveryInfo embedded />
               <div className={cx('about__sections')}>
-                <article id="delivery">
-                  <h4>Доставка</h4>
-                  <p>
-                    Доступні способи доставки та відділення обираються під час
-                    оформлення замовлення. Підсумкові умови підтверджуються перед
-                    відправленням.
-                  </p>
-                </article>
                 <article id="payment">
                   <h4>Оплата</h4>
                   <p>
                     Наразі замовлення оформлюється з підтвердженням менеджером.
-                    Онлайн-оплата ще не підключена; кошти на сайті не списуються.
+                    Онлайн-оплата ще не підключена; кошти на сайті не
+                    списуються.
                   </p>
                 </article>
                 <article id="returns">
@@ -523,15 +539,16 @@ export default function App() {
                   <p>
                     Для звернення щодо повернення або обміну зв’яжіться з
                     магазином через контакти в особистому кабінеті чи на сайті.
-                    Умови залежать від виду товару та вимог законодавства України.
+                    Умови залежать від виду товару та вимог законодавства
+                    України.
                   </p>
                 </article>
                 <article id="offer">
                   <h4>Договір оферти</h4>
                   <p>
-                    Повний текст публічної оферти готується до публікації. До його
-                    затвердження цей блок не є договором і не замінює юридичних
-                    умов продажу.
+                    Повний текст публічної оферти готується до публікації. До
+                    його затвердження цей блок не є договором і не замінює
+                    юридичних умов продажу.
                   </p>
                 </article>
               </div>
@@ -557,6 +574,7 @@ export default function App() {
         !productError && (
           <ProductModal
             key={selectedProduct.id}
+            startWithReviews={startWithReviews}
             product={
               fullProduct?.id === selectedProduct.id
                 ? fullProduct

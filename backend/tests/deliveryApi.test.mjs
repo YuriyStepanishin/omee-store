@@ -85,3 +85,28 @@ test('NP uses provider totals, excludes closed points and searches cached wareho
  assert.deepEqual((await service.lookup({...query,type:'locker',q:'1'})).map(point=>point.id), ['locker']);
  assert.equal(calls, 1);
 });
+
+test('NP follows provider totals when pages are shorter than the requested limit', async () => {
+ const pages = [];
+ const service = createDeliveryService({
+  env: {NOVA_POSHTA_API_KEY:'secret'},
+  fetcher: async (_url, options) => {
+   const {Page, FindByString} = JSON.parse(options.body).methodProperties;
+   pages.push(Page);
+   assert.equal(FindByString, '');
+   const data = Page === '1'
+    ? [{Ref:'branch-1', Number:'1', Description:'Відділення №1'}]
+    : [{Ref:'branch-101', Number:'101', Description:'Відділення №101'},
+       {Ref:'locker-202', Number:'202', Description:'Поштомат №202'}];
+   return ok({success:true, info:{totalCount:'3'}, data});
+  },
+ });
+ const query = {carrier:'nova_poshta', kind:'points', cityRef:'city'};
+ const [branch, locker] = await Promise.all([
+  service.lookup({...query, q:'101'}),
+  service.lookup({...query, type:'locker', q:'№ 202'}),
+ ]);
+ assert.equal(branch[0]?.id, 'branch-101');
+ assert.equal(locker[0]?.id, 'locker-202');
+ assert.deepEqual(pages, ['1', '2']);
+});

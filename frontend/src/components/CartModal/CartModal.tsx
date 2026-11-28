@@ -153,6 +153,11 @@ export default function CartModal() {
     setBusy(true);
     setError('');
     try {
+      const { city, point, manual } = deliverySelection;
+      const directoryRefs =
+        form.deliveryCarrier === 'nova_poshta' && !manual && city && point
+          ? { deliveryCityRef: city.id, deliveryPointRef: point.id }
+          : {};
       const payment =
         mode === 'pickup'
           ? {
@@ -162,7 +167,7 @@ export default function CartModal() {
               deliveryCarrier: 'pickup' as const,
               deliveryType: 'pickup' as const,
             }
-          : form;
+          : { ...form, ...directoryRefs };
       const order = await checkoutOrder({
         items: orderable.map(({ productId, qty }) => ({ productId, qty })),
         payment,

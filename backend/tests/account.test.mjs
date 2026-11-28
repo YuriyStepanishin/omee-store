@@ -55,6 +55,51 @@ test('wishlist insert is idempotent, rejects unpublished products and removal is
   assert.ok(calls.at(-1).sql.includes('user_id=$1 AND product_id=$2'));
   assert.deepEqual(calls.at(-1).args,[userId,productId]);
 });
+
+test('reviews are publicly readable, while registered users can save only their own valid ratings', async () => {
+  const config = {
+    mode:'postgres', databaseUrl:'postgres://localhost/reviews-test', origins:[],
+    accessSecret:'a'.repeat(48), refreshSecret:'b'.repeat(48),
+  };
+  const writes = [];
+  const pool = getPool(config.databaseUrl);
+  pool.query = async (sql,args) => {
+    if (sql.includes('FROM users WHERE id')) return {rows:[{id:userId,role:'CUSTOMER'}]};
+    if (sql.startsWith('INSERT INTO reviews')) {
+      writes.push({sql,args});
+      return {rows:[{rating:args[2],comment:args[3]}]};
+    }
+    if (sql.includes('row_to_json')) return {rows:[{review:null}]};
+    return {rows:[{summary:{average:null,count:0},items:[]}]};
+  };
+  try {
+    const app = createApp(config);
+    const cookie = 'kss_access=' + signSession({id:userId},config).access;
+    for (const target of ['store', productId]) {
+      const path = '/api/reviews/' + target;
+      const input = {rating:5,comment:'  Дуже сподобалося!  ',expectedUserId:userId};
+      assert.deepEqual((await request(app,path)).body, {
+        summary:{average:null,count:0},items:[],hasNext:false,
+      });
+      assert.equal((await request(app,path+'/mine')).status,401);
+      assert.equal((await request(app,path+'/mine',undefined,'PUT',input)).status,401);
+      assert.equal((await request(app,path+'/mine',cookie,'PUT',{...input,rating:6})).status,400);
+      assert.equal((await request(app,path+'/mine',cookie,'PUT',{...input,expectedUserId:productId})).status,409);
+      assert.equal((await request(app,path+'/mine',cookie,'PUT',{...input,comment:'а'.repeat(2001)})).status,400);
+      assert.deepEqual((await request(app,path+'/mine',cookie,'PUT',input)).body, {
+        rating:5,comment:'Дуже сподобалося!',
+      });
+    }
+    assert.equal(writes.length,2);
+    assert.deepEqual(writes.map(call=>call.args), [
+      [null,userId,5,'Дуже сподобалося!'], [productId,userId,5,'Дуже сподобалося!'],
+    ]);
+    assert.match(writes[0].sql,/ON CONFLICT \(user_id\) WHERE product_id IS NULL/);
+    assert.match(writes[1].sql,/ON CONFLICT \(user_id,product_id\)/);
+  } finally {
+    await closePool();
+  }
+});
 test('checkout saves trusted account ownership and immutable product names with the order',async()=>{
   const calls=[];
   const client={query:async(sql,args)=>{calls.push({sql,args});return {rows:sql.includes('JOIN product_variants v')?[{id:productId,name:'Збережена назва',sku:'SKU-1',price:'100.00',stock:5,is_active:true,variant_active:true,variant_id:'33333333-3333-4333-8333-333333333333'}]:[]};},release(){}};

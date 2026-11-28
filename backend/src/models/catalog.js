@@ -1,9 +1,10 @@
 import {canonicalProduct, variantJson} from './productVariants.js';
 import {catalogDetails} from './catalogDetails.js';
+import {productReviewSummary} from './reviews.js';
 export async function loadCatalog(pool,{includeDrafts=false,productId=null,productIds=null}={}) {
  const result=await pool.query(
   `SELECT p.id,p.name AS title,p.sku,c.name AS category,p.price,p.old_price AS "oldPrice",p.stock,p.description,p.badges,b.name AS "brandName",
-  ${variantJson()} AS variants,
+  ${variantJson()} AS variants,${productReviewSummary},
   (COALESCE(p.characteristics,'{}'::jsonb)-'sourceData') || jsonb_build_object('sourceData',
     (SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb)
      FROM jsonb_each(CASE WHEN jsonb_typeof(p.characteristics->'sourceData')='object' THEN p.characteristics->'sourceData' ELSE '{}'::jsonb END)
@@ -41,7 +42,7 @@ export async function loadCatalogPage(pool,{page=1,limit=24,search='',brand='',c
  const count=await pool.query(`SELECT count(*)::integer AS total FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id WHERE ${where}`,[q,selectedBrand,selectedCategory,selectedLine]);
  const total=count.rows[0].total;
  const result=await pool.query(`SELECT p.id,p.name AS title,p.sku,c.name AS category,p.price,p.old_price AS "oldPrice",p.stock,p.description,p.badges,b.name AS "brandName",
- ${variantJson()} AS variants,
+ ${variantJson()} AS variants,${productReviewSummary},
  (COALESCE(p.characteristics,'{}'::jsonb)-'sourceData') || jsonb_build_object('sourceData',
  (SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb) FROM jsonb_each(CASE WHEN jsonb_typeof(p.characteristics->'sourceData')='object' THEN p.characteristics->'sourceData' ELSE '{}'::jsonb END)
  WHERE key IN ('brand','category','group','subcategory','characteristics','productDescription','description','formulaFeatures','usage','recommendation','activeIngredients','inciIngredients'))) AS characteristics,

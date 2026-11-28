@@ -53,7 +53,8 @@ export function createDeliveryService({
         'Довідник Нової пошти тимчасово недоступний. Введіть адресу вручну.'
       );
     }
-    return { rows: data.data, total: Number(data.info?.totalCount) };
+    const total = data.info?.totalCount;
+    return { rows: data.data, total: total == null || total === '' ? NaN : Number(total) };
   }
   async function retryNovaPoshta(method, properties, signal) {
     for (const wait of [0, 700, 1500, 2600]) {
@@ -70,6 +71,8 @@ export function createDeliveryService({
     const signal = AbortSignal.timeout(10000);
     const points = new Map();
     const limit = 500;
+    let received = 0;
+    let complete = false;
     for (let page = 1; page <= 20; page++) {
       const { rows, total } = await retryNovaPoshta('getWarehouses', {
         CityRef: cityRef,
@@ -87,8 +90,14 @@ export function createDeliveryService({
           locker: /postomat|locker/i.test(row.CategoryOfWarehouse ?? '') || /поштомат/i.test(row.Description),
         });
       }
-      if (rows.length < limit || (total > 0 && page * limit >= total)) break;
+      received += rows.length;
+      if (Number.isFinite(total) ? received >= total : rows.length < limit) {
+        complete = true;
+        break;
+      }
+      if (!rows.length) break;
     }
+    if (!complete) throw fail('Не вдалося завантажити повний довідник Нової пошти. Спробуйте ще раз.');
     const value = [...points.values()];
     if (novaPoshtaWarehouses.size >= 50) novaPoshtaWarehouses.delete(novaPoshtaWarehouses.keys().next().value);
     novaPoshtaWarehouses.set(cityRef, { until: Date.now() + 300000, points: value });

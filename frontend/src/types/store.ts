@@ -1,4 +1,5 @@
 import type {DeliveryCarrier,DeliveryType} from '@/constants/delivery';
+export type ReviewSummary = { average: number | null; count: number };
 export type ProductCategory = string;
 export interface ProductBadge { label: string; background: string; color: string; }
 export interface ProductVariant { id:string; sourceProductId:string; volume:number|null; unit:string|null; price:number; oldPrice:number|null; stock:number; sku:string; isActive:boolean; }
@@ -25,6 +26,7 @@ export interface Product {
     image: string;
     images?: string[];
     isPublished?: boolean;
+    reviewSummary?: ReviewSummary;
 }
 export interface MediaItem {
     source?: {key?:string;provider?:string;page?:string;date?:string;author?:string;language?:string;description?:string;license?:string;licenseUrl?:string} | null;
@@ -93,5 +95,7 @@ export interface CheckoutPayload {
     payment: Omit<PaymentPayload, 'deliveryCarrier' | 'deliveryType'> & {
         deliveryCarrier?: DeliveryCarrier | 'pickup';
         deliveryType?: DeliveryType | 'pickup';
+        deliveryCityRef?: string;
+        deliveryPointRef?: string;
     };
 }

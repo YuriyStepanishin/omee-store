@@ -13,6 +13,7 @@ import {deliveryRoutes} from './routes/delivery.js';
 import {adminRoutes} from './routes/admin.js';
 import {articleRoutes} from './routes/articles.js';
 import {accountRoutes} from './routes/account.js';
+import {reviewRoutes} from './routes/reviews.js';
 import {errorHandler,notFound} from './middleware/errors.js';
 export function createApp(config=readEnv()) {
  const app=express();app.disable('x-powered-by');app.use(helmet());
@@ -22,6 +23,7 @@ export function createApp(config=readEnv()) {
  app.get('/api/health',async(req,res)=>{if(config.mode==='postgres'){try{await getPool(config.databaseUrl).query('SELECT 1');}catch{return res.status(503).json({status:'unavailable',database:'unavailable'});}}res.json({status:'ok',mode:config.mode});});
  app.use('/api/auth',authRoutes(config));
  app.use('/api/account',accountRoutes(config));
+ app.use('/api/reviews',reviewRoutes(config));
  app.use('/api/admin',(req,res,next)=>{res.set('Cache-Control','no-store');next();});
  app.use('/api',adminRoutes(config));
  app.use('/api',catalogRoutes(config));

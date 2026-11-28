@@ -7,6 +7,7 @@ import css from './ProductCard.module.css';
 import FavoriteButton from './FavoriteButton';
 import ProductBadges from '../ProductBadges/ProductBadges';
 import PackagingOptions from './PackagingOptions';
+import ReviewRating from '../Reviews/ReviewRating';
 import {availableVariants, withPackaging} from './productPackaging';
 const money = (value: number) =>
   new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(
@@ -18,12 +19,13 @@ export const canAddProduct = (p: Product) =>
   p.price > 0 &&
   (p.stock === undefined || p.stock > 0);
 export function ProductPrice({ product: p }: { product: Product }) {
+  if (!Number.isFinite(p.price) || p.price <= 0) return null;
   return (
     <span className={css.price}>
       {p.oldPrice != null && p.oldPrice > p.price && (
         <del>{money(p.oldPrice)}</del>
       )}
-      {p.price > 0 ? money(p.price) : 'Ціна уточнюється'}
+      {money(p.price)}
     </span>
   );
 }
@@ -42,7 +44,7 @@ export function CartButton({
   const label =
     product.isPublished !== true
       ? 'Ще не опубліковано'
-      : product.price <= 0
+      : !Number.isFinite(product.price) || product.price <= 0
         ? 'Ціна уточнюється'
         : product.stock === 0
           ? 'Немає в наявності'
@@ -87,7 +89,7 @@ export default function ProductCard({
   busy: boolean;
   added: boolean;
   onAdd: (sourceProductId?: string) => void;
-  onOpen: () => void;
+  onOpen: (section?: 'reviews') => void;
 }) {
   const [sourceId, setSourceId] = useState('');
   const variants = availableVariants(p);
@@ -106,7 +108,7 @@ export default function ProductCard({
       <button
         type="button"
         className={css.photoButton}
-        onClick={onOpen}
+        onClick={() => onOpen()}
         aria-label={`Переглянути ${p.title}`}
       >
         <ProductPhoto
@@ -125,10 +127,21 @@ export default function ProductCard({
       </div>
       {p.isPublished !== true && <span className={css.badge}>Чернетка</span>}
       <h3>
-        <button type="button" className={css.title} onClick={onOpen}>
+        <button type="button" className={css.title} onClick={() => onOpen()}>
           {p.title}
         </button>
       </h3>
+      {p.isPublished === true && (
+        <button
+          type="button"
+          className={css.reviewLink}
+          onClick={() => onOpen('reviews')}
+          aria-label={`Відгуки про ${p.title}`}
+        >
+          <ReviewRating summary={p.reviewSummary} />
+          <span>Відгуки</span>
+        </button>
+      )}
       <p className={css.description}>{p.description}</p>
       <div className={css.bottom}>
         <PackagingOptions

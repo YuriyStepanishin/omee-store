@@ -14,12 +14,14 @@ type Option = { id: string; label: string; regionRef?: string };
 
 export type DeliverySelection = {
   city: Option | null;
+  point: Option | null;
   manual: boolean;
   pointSearch: string;
 };
 
 export const initialDeliverySelection: DeliverySelection = {
   city: null,
+  point: null,
   manual: false,
   pointSearch: '',
 };
@@ -48,7 +50,7 @@ export default function DeliveryFields({
 }) {
   const carrier = form.deliveryCarrier ?? 'nova_poshta';
   const type = form.deliveryType ?? 'branch';
-  const { city, manual, pointSearch } = selection;
+  const { city, point, manual, pointSearch } = selection;
   const cityText = form.city.trim();
   const pointText = pointSearch.trim();
   const cityQuery = useDebounced(cityText);
@@ -89,7 +91,7 @@ export default function DeliveryFields({
   const cityOptions = cityText === cityQuery ? cities.data ?? [] : [];
   const pointOptions = pointText === pointQuery ? points.data ?? [] : [];
   const selectedCityOption = city ? [city] : cityOptions;
-  const showSavedPoint = form.address && !pointOptions.some(option => option.label.slice(0, 300) === form.address);
+  const showSavedPoint = point && !pointOptions.some(option => option.id === point.id);
 
   let searchStatus = '';
   if (!courier && !manual) {
@@ -144,7 +146,7 @@ export default function DeliveryFields({
         <label>
           Як отримати
           <select value={type} onChange={event => {
-            onSelectionChange({ ...selection, pointSearch: '' });
+            onSelectionChange({ ...selection, point: null, pointSearch: '' });
             onChange({ ...form, deliveryType: event.target.value as DeliveryType, address: '' });
           }}>
             {Object.entries(DELIVERY_TYPE_LABELS)
@@ -163,7 +165,7 @@ export default function DeliveryFields({
           autoComplete="address-level2"
           placeholder={lookup ? 'Введіть щонайменше 2 літери' : 'Місто або село'}
           onChange={event => {
-            onSelectionChange({ ...selection, city: null, pointSearch: '' });
+            onSelectionChange({ ...selection, city: null, point: null, pointSearch: '' });
             onChange({ ...form, city: event.target.value, address: lookup ? '' : form.address });
           }}
         />
@@ -176,7 +178,7 @@ export default function DeliveryFields({
             <select required value={city?.id ?? ''} onChange={event => {
               const option = cityOptions.find(item => item.id === event.target.value);
               if (!option) return;
-              onSelectionChange({ ...selection, city: option, pointSearch: '' });
+              onSelectionChange({ ...selection, city: option, point: null, pointSearch: '' });
               onChange({ ...form, city: option.label.slice(0, 120), address: '' });
             }}>
               <option value="" disabled>Оберіть населений пункт та область</option>
@@ -193,20 +195,22 @@ export default function DeliveryFields({
                   maxLength={120}
                   placeholder="Номер або вулиця"
                   onChange={event => {
-                    onSelectionChange({ ...selection, pointSearch: event.target.value });
+                    onSelectionChange({ ...selection, point: null, pointSearch: event.target.value });
                     onChange({ ...form, address: '' });
                   }}
                 />
               </label>
               <label>
                 {pointLabel}
-                <select required value={form.address} onChange={event => {
-                  onChange({ ...form, address: event.target.value });
+                <select required value={point?.id ?? ''} onChange={event => {
+                  const option = pointOptions.find(item => item.id === event.target.value) ?? null;
+                  onSelectionChange({ ...selection, point: option });
+                  onChange({ ...form, address: option?.label.slice(0, 300) ?? '' });
                 }}>
                   <option value="">Оберіть зі списку</option>
-                  {showSavedPoint && <option value={form.address}>{form.address}</option>}
+                  {showSavedPoint && <option value={point.id}>{point.label}</option>}
                   {pointOptions.map(option => (
-                    <option key={option.id} value={option.label.slice(0, 300)}>{option.label}</option>
+                    <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
               </label>
@@ -224,7 +228,7 @@ export default function DeliveryFields({
             placeholder={courier ? 'Вулиця, будинок, квартира (за наявності)' : type === 'locker' ? 'Номер та адреса поштомата' : carrierInfo?.hint}
             onChange={event => {
               if (!courier && !configured && !manual) {
-                onSelectionChange({ ...selection, manual: true });
+                onSelectionChange({ ...selection, point: null, manual: true });
               }
               onChange({ ...form, address: event.target.value });
             }}
@@ -236,7 +240,7 @@ export default function DeliveryFields({
         <p role="status">{searchStatus || 'Вартість доставки уточнимо під час підтвердження замовлення.'}</p>
         {configured && !courier && (
           <button type="button" className={css.toggle} onClick={() => {
-            onSelectionChange({ ...selection, manual: !manual, pointSearch: '' });
+            onSelectionChange({ ...selection, point: null, manual: !manual, pointSearch: '' });
             if (manual) onChange({ ...form, address: '' });
           }}>
             {manual ? 'Обрати з довідника' : 'Ввести адресу вручну'}

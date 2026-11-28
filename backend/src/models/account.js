@@ -1,3 +1,6 @@
+import {productReviewSummary} from './reviews.js';
+import {canonicalProduct} from './productVariants.js';
+
 export function accountRepository(pool) {
   return {
     async orders(userId,page) {
@@ -13,8 +16,11 @@ export function accountRepository(pool) {
     },
     async favorites(userId,page) {
       const {rows}=await pool.query(`SELECT p.id,p.name AS title,p.sku,c.name AS category,p.price,p.old_price AS "oldPrice",p.stock,p.description,(p.is_active AND c.is_active) AS "isPublished",
+        ${productReviewSummary},
         COALESCE((SELECT image_url FROM product_images WHERE product_id=p.id ORDER BY (image_url LIKE 'https://res.cloudinary.com/%') DESC,sort_order,id LIMIT 1),'') AS image
-        FROM favorites f JOIN products p ON p.id=f.product_id JOIN categories c ON c.id=p.category_id WHERE f.user_id=$1 ORDER BY f.created_at DESC,f.id LIMIT 20 OFFSET $2`,[userId,(page-1)*20]);
+        FROM favorites f JOIN products p ON p.id=f.product_id JOIN categories c ON c.id=p.category_id
+        WHERE f.user_id=$1 AND p.is_active AND c.is_active AND ${canonicalProduct}
+        ORDER BY f.created_at DESC,f.id LIMIT 20 OFFSET $2`,[userId,(page-1)*20]);
       return {items:rows.map(row=>({...row,price:Number(row.price),oldPrice:row.oldPrice===null?null:Number(row.oldPrice)})),page,limit:20};
     },
     async addFavorite(userId,productId) {

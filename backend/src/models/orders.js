@@ -17,7 +17,13 @@ export async function createOrder(pool,payload,userId=null) {
   const lines=payload.items.map(item=>{const p=rows.find(row=>row.id===item.productId);if(!p||!p.is_active||!p.variant_active||p.stock<item.qty||!Number.isFinite(Number(p.price))||Number(p.price)<=0)throw Object.assign(new Error('Товар недоступний або недостатньо залишку.'),{status:409});return {...item,price:p.price,cents:Math.round(Number(p.price)*100),variantId:p.variant_id};});
   const totalCents=lines.reduce((sum,line)=>sum+line.cents*line.qty,0);
   const orderId=randomUUID();
-  await client.query(`INSERT INTO orders(id,status,total,delivery_method,payment_method,customer_name,customer_phone,customer_email,city,address,user_id) VALUES($1,'NEW',$2,$8,'on_confirmation',$3,$4,$5,$6,$7,$9)`,[orderId,(totalCents/100).toFixed(2),customer.fullName.trim(),customer.phone.trim(),customer.email.trim(),customer.city.trim(),customer.address.trim(),delivery.method,userId]);
+  await client.query(
+   `INSERT INTO orders(id,status,total,delivery_method,payment_method,customer_name,customer_phone,customer_email,
+     city,address,user_id,delivery_city_ref,delivery_point_ref)
+    VALUES($1,'NEW',$2,$8,'on_confirmation',$3,$4,$5,$6,$7,$9,$10,$11)`,
+   [orderId,(totalCents/100).toFixed(2),customer.fullName.trim(),customer.phone.trim(),customer.email.trim(),
+    customer.city.trim(),customer.address.trim(),delivery.method,userId,delivery.cityRef??null,delivery.pointRef??null]
+  );
   for(const line of lines){const product=rows.find(row=>row.id===line.productId);await client.query('INSERT INTO order_items(order_id,product_id,price,quantity,product_name,product_sku) VALUES($1,$2,$3,$4,$5,$6)',[orderId,line.productId,line.price,line.qty,product.volume_value == null || !product.volume_unit ? product.name : `${product.name} · ${product.volume_value} ${product.volume_unit}`,product.sku]);await client.query('UPDATE product_variants SET stock=stock-$1 WHERE id=$2',[line.qty,line.variantId]);await client.query('UPDATE products SET stock=stock-$1 WHERE id=$2',[line.qty,line.productId]);}
   await client.query('COMMIT');
   return {orderId,status:'NEW',amount:totalCents/100};

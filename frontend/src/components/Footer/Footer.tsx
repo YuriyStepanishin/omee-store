@@ -141,6 +141,9 @@ export default function Footer() {
               <Link href="/#about">Про магазин</Link>
             </li>
             <li>
+              <Link href="/#store-reviews">Відгуки про магазин</Link>
+            </li>
+            <li>
               <Link href="/blog">Увесь Журнал</Link>
             </li>
             <li>

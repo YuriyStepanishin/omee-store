@@ -7,9 +7,11 @@ import css from './ProductModal.module.css';
 import PackagingOptions from '../ProductCard/PackagingOptions';
 import FavoriteButton from '../ProductCard/FavoriteButton';
 import ProductBadges from '../ProductBadges/ProductBadges';
+import Reviews from '../Reviews/Reviews';
 import {availableVariants, withPackaging} from '../ProductCard/productPackaging';
-export default function ProductModal({product:p,busy,added,onAdd,onClose}:{product:Product;busy:boolean;added:boolean;onAdd:(sourceProductId?:string)=>void;onClose:()=>void}){
+export default function ProductModal({product:p,busy,added,onAdd,onClose,startWithReviews=false}:{product:Product;busy:boolean;added:boolean;onAdd:(sourceProductId?:string)=>void;onClose:()=>void;startWithReviews?:boolean}){
  const dialog=useRef<HTMLDialogElement>(null);
+ const reviews=useRef<HTMLDivElement>(null);
  const titleId=useId();const [selected,setSelected]=useState(0);
  const variants=availableVariants(p);
  const [variantId,setVariantId]=useState<string>('');
@@ -21,6 +23,12 @@ export default function ProductModal({product:p,busy,added,onAdd,onClose}:{produ
   element.showModal();const overflow=document.body.style.overflow;document.body.style.overflow='hidden';
   return()=>{element.close();document.body.style.overflow=overflow;};
  },[]);
+ useEffect(()=>{
+  if(startWithReviews && reviews.current) {
+   reviews.current.focus({preventScroll:true});
+   reviews.current.scrollIntoView({block:'start',behavior:'instant'});
+  }
+ },[startWithReviews]);
  const close=()=>dialog.current?.close();
  return <dialog ref={dialog} className={css.dialog} aria-labelledby={titleId} onClose={()=>{if(!dialog.current?.open)onClose();}} onClick={event=>{
   if(event.target!==event.currentTarget)return;const r=event.currentTarget.getBoundingClientRect();
@@ -33,6 +41,7 @@ export default function ProductModal({product:p,busy,added,onAdd,onClose}:{produ
     {p.description&&<section><h3>Опис</h3><p>{p.description}</p></section>}
     {Object.keys(p.characteristics||{}).length>0&&<section><h3>Характеристики</h3><dl>{Object.entries(p.characteristics||{}).map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl></section>}
     {p.details?.map(detail=><section key={detail.label}><h3>{detail.label}</h3><p>{detail.text}</p></section>)}
+    {p.isPublished===true&&<div ref={reviews} tabIndex={-1}><Reviews productId={p.id}/></div>}
    </div>
   </div>
  </dialog>;

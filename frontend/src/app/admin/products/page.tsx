@@ -117,6 +117,8 @@ export default function Products() {
       client.invalidateQueries({ queryKey: ['admin', 'products'] }),
       client.invalidateQueries({ queryKey: ['admin', 'overview'] }),
       client.invalidateQueries({ queryKey: ['catalog'] }),
+      client.invalidateQueries({ queryKey: ['favorites'] }),
+      client.invalidateQueries({ queryKey: ['cart-products'] }),
     ]);
   }
   function edit(product: AdminProduct) {
@@ -348,7 +350,7 @@ export default function Products() {
         <section className={css.panel}>
           <h2>Товари ({data?.total || 0})</h2>
           <form
-            className={css.toolbar}
+            className={`${css.toolbar} ${css.productFilters}`}
             onSubmit={e => {
               e.preventDefault();
               setPage(1);
